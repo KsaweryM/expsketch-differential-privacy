@@ -14,8 +14,13 @@ fi
 echo "pre-commit: rebuilding thesis.pdf ..."
 mkdir -p build
 if ! make pdf > build/pre-commit.log 2>&1; then
-    echo "pre-commit: build failed, commit aborted (full log: build/pre-commit.log):" >&2
-    tail -n 30 build/pre-commit.log >&2
+    echo "pre-commit: build failed, commit aborted. Errors:" >&2
+    if [ -f build/thesis.log ] && grep -qE '^(\./.*:[0-9]+:|!)' build/thesis.log; then
+        grep -E -A2 '^(\./.*:[0-9]+:|!)' build/thesis.log | head -n 20 >&2
+    else
+        tail -n 20 build/pre-commit.log >&2
+    fi
+    echo "pre-commit: full log in build/pre-commit.log and build/thesis.log" >&2
     exit 1
 fi
 git add thesis.pdf

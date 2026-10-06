@@ -29,6 +29,9 @@ def convert_with_gi(src: str, dst: str) -> None:
     # librsvg reports sizes in CSS pixels (96 dpi); PDF uses points (72 dpi).
     scale = 72.0 / 96.0
     surface = cairo.PDFSurface(dst, width * scale, height * scale)
+    # Fixed dates keep the output byte-identical between builds.
+    surface.set_metadata(cairo.PDF_METADATA_CREATE_DATE, "2024-01-01T00:00:00Z")
+    surface.set_metadata(cairo.PDF_METADATA_MOD_DATE, "2024-01-01T00:00:00Z")
     ctx = cairo.Context(surface)
     ctx.scale(scale, scale)
     viewport = Rsvg.Rectangle()
