@@ -14,11 +14,26 @@ rekonstrukcyjnego i analizą eksperymentalną.
 make            # konwertuje rysunki SVG -> PDF i buduje thesis.pdf
 make watch      # przebudowuje przy każdej zmianie
 make check      # wypisuje ostrzeżenia (niezdefiniowane referencje, overfull itp.)
-make clean      # usuwa pliki pomocnicze (katalog build/)
-make distclean  # usuwa też thesis.pdf i wygenerowane PDF-y rysunków
+make hooks      # włącza hook pre-commit (raz po sklonowaniu repozytorium)
+make clean      # usuwa katalog build/
+make distclean  # usuwa build/ oraz thesis.pdf
 ```
 
-Pliki pośrednie trafiają do `build/`, gotowy PDF jest kopiowany do `thesis.pdf`.
+Wszystko, co powstaje podczas budowania (pliki pomocnicze LaTeX-a, rysunki
+przekonwertowane do PDF, cache `minted`, logi), trafia do `build/`, który jest
+ignorowany przez gita. Do katalogu głównego kopiowany jest tylko gotowy
+`thesis.pdf`, który jest wersjonowany.
+
+### Hook pre-commit
+
+Po `make hooks` (ustawia `git config core.hooksPath .githooks`) każdy commit
+zmieniający źródła pracy najpierw przebudowuje `thesis.pdf` i dodaje go do
+commita. Gdy kompilacja się nie powiedzie, commit jest przerywany, a pełny log
+zostaje w `build/pre-commit.log`. Commity zmieniające tylko README, LICENSE
+lub `notes/` pomijają budowanie. Jednorazowe obejście: `git commit --no-verify`.
+
+Hook buduje stan katalogu roboczego, więc przed commitem warto mieć
+zapisane (i dodane) wszystkie zmiany.
 
 ### Wymagania
 
@@ -31,9 +46,6 @@ Pliki pośrednie trafiają do `build/`, gotowy PDF jest kopiowany do `thesis.pdf
 - Do konwersji rysunków: Python 3 z PyGObject + librsvg + pycairo
   (`python3-gi python3-gi-cairo gir1.2-rsvg-2.0`). Skrypt `scripts/svg2pdf.py`
   w razie braku tych bibliotek próbuje użyć `rsvg-convert` lub `inkscape`.
-
-Wygenerowane PDF-y rysunków (`figures/**/*.pdf`) można trzymać w repozytorium —
-wtedy projekt kompiluje się również na Overleafie bez żadnej konwersji.
 
 ## Struktura
 
@@ -54,18 +66,20 @@ chapters/
   07-summary.tex            podsumowanie
 appendices/proofs.tex    dowody twierdzeń z rozdz. 4
 figures/
-  diagrams/              schematy (SVG z diagrams.net) + wygenerowane PDF
-  plots/                 wykresy z eksperymentów (SVG) + wygenerowane PDF
+  diagrams/              schematy (SVG z diagrams.net, z osadzonym źródłem)
+  plots/                 wykresy z eksperymentów (SVG)
   unused/                rysunki nieużywane obecnie w pracy
 notes/                   lista lektur i niecytowane wpisy BibTeX
 scripts/svg2pdf.py       konwersja SVG -> PDF
+.githooks/pre-commit     hook przebudowujący thesis.pdf przed commitem
+build/                   wyniki budowania (ignorowane przez gita)
 ```
 
 ## Konwencje
 
 - Rysunki dołączamy przez `\includegraphics{nazwa}` (bez ścieżki i rozszerzenia —
-  `\graphicspath` wskazuje na `figures/diagrams/` i `figures/plots/`).
-  Nowy rysunek: wrzuć SVG do odpowiedniego katalogu, `make` sam zrobi PDF.
+  `\graphicspath` wskazuje na przekonwertowane pliki w `build/figures/`).
+  Nowy rysunek: wrzuć SVG do `figures/diagrams/` lub `figures/plots/`, `make` sam zrobi PDF.
 - Notacja zdefiniowana w preambule `thesis.tex`:
   `\lmax` (λ_MAX), `\Lmin` (Λ_min), `\thr` (ε/λ_MAX), `\Exp`, `\Lap`, `\Range`,
   `\merge`, `\N`, `\R`, `\abs{}`, `\norm{}`, `\dd` (różniczka w całkach).

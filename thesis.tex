@@ -9,6 +9,8 @@
 %   druk / archiwum      - print version (one-sided, wide binding margin)
 %                          or archive version (two-sided)
 %   en                   - English version of the template
+% minted (loaded by dyplom.cls) must know that latexmk writes to build/.
+\PassOptionsToPackage{outputdir=build}{minted}
 \documentclass[magister,druk,en]{dyplom}
 
 % ---------------------------------------------------------------------------
@@ -23,7 +25,8 @@
 \let\Bbbk\relax % already defined by amssymb
 \usepackage[varg]{newtxmath}
 
-\graphicspath{{figures/diagrams/}{figures/plots/}}
+% Figures are converted from SVG to PDF into build/figures/ by `make figures`.
+\graphicspath{{build/figures/diagrams/}{build/figures/plots/}}
 
 % Maximum section depth that gets a number.
 \setcounter{secnumdepth}{4}

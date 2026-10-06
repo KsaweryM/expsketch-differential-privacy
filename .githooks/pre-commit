@@ -1,0 +1,22 @@
+#!/bin/sh
+# Rebuild thesis.pdf before every commit and include it in the commit.
+# Enable with:  make hooks   (sets git config core.hooksPath .githooks)
+# Skip once with:  git commit --no-verify
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+# Nothing to do if no thesis sources are staged (e.g. README-only commits).
+if ! git diff --cached --name-only | grep -qvE '^(README\.md|LICENSE|notes/|\.gitignore$|\.githooks/)'; then
+    exit 0
+fi
+
+echo "pre-commit: rebuilding thesis.pdf ..."
+mkdir -p build
+if ! make pdf > build/pre-commit.log 2>&1; then
+    echo "pre-commit: build failed, commit aborted (full log: build/pre-commit.log):" >&2
+    tail -n 30 build/pre-commit.log >&2
+    exit 1
+fi
+git add thesis.pdf
+echo "pre-commit: thesis.pdf updated and staged."
