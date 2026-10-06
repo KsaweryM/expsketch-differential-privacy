@@ -1,0 +1,115 @@
+\chapter{An introduction to differential privacy}
+\label{chap:dp}
+
+Differential privacy is a technique for safeguarding data privacy that enables statistical analysis of a dataset while minimizing the risk of disclosing information about individuals in that dataset. The goal of this technique is to ensure that the results of the analysis do not allow the identification of specific individuals in the dataset.
+
+Differential privacy enables the analysis of datasets that contain sensitive information, such as medical data. For example, a dataset may include the medical histories of individual patients. An analysis using this technique allows drawing general conclusions about the entire dataset, such as correlations between different diseases among patients, while simultaneously protecting the privacy of individuals.
+
+In practice, differential privacy introduces artificial noise into the analysis, which makes its results more general and harder to link to specific individuals. As a result, even someone who has access to the results of the analysis cannot explicitly link them to specific individuals in the dataset.
+
+Before formally defining differential privacy, we need to establish several auxiliary concepts.
+
+\begin{definition}[{Probability simplex~\cite[p.~16]{algFound}}]
+Given a discrete set $B$, the probability simplex over $B$, denoted $\Delta(B)$, is defined to be
+\[
+\Delta(B) = \left\{ x \in \R^{\abs{B}} : x_i \geq 0 \text{ for all } i \text{ and } \sum_{i=1}^{\abs{B}} x_i = 1 \right\}.
+\]
+\end{definition}
+
+\begin{definition}[{Randomized algorithm~\cite[p.~16]{algFound}}]
+A randomized algorithm $\mathcal{M}$ with domain $A$ and discrete range $B$ is associated with a mapping $N : A \rightarrow \Delta(B)$. On input $a \in A$, the algorithm $\mathcal{M}$ outputs $\mathcal{M}(a) = b$ with probability $(N(a))_b$ for each $b \in B$.
+\end{definition}
+
+The first two definitions concern the probability simplex and randomized algorithms. The probability simplex over a set $B$ is the set $\Delta(B)$ whose elements represent all possible probability distributions over the elements of $B$. A randomized algorithm $\mathcal{M}$ with domain $A$ and discrete range $B$ is the kind of algorithm for which we will require differential privacy. For an argument $a \in A$, $\mathcal{M}$ returns an element $b \in B$ according to the probability distribution corresponding to a specific point of the set $\Delta(B)$.
+
+\begin{definition}[{Database~\cite[p.~17]{algFound}}]
+We will think of databases $x$ as being collections of records from a universe $\mathcal{X}$. More precisely, $x \in \N^{\mathcal{X}}$, where each entry $x_i$ represents the number of elements of type $i \in \mathcal{X}$ in the database $x$.
+\end{definition}
+
+According to this definition, a database is a function $x : \mathcal{X} \rightarrow \N$ which, for an element $i \in \mathcal{X}$, returns the number of its occurrences in the database. Such a function can also be written as $x \in \N^{\mathcal{X}}$. For example, a database $x$ containing basic information about all citizens of Poland can be defined as follows. Let $\mathcal{X}$ be the set of all possible combinations of first names, surnames, addresses and valid PESEL numbers. For an element $p \in \mathcal{X}$, the value $x(p)$ is the number of occurrences of $p$ in the database.
+
+\begin{definition}[{$\ell_1$-distance between databases~\cite[p.~17]{algFound}}]
+The $\ell_1$ norm of a database $x$ is denoted $\norm{x}_1$ and is defined to be
+\[
+\norm{x}_1 = \sum_{i=1}^{\abs{\mathcal{X}}} \abs{x_i}.
+\]
+The $\ell_1$ distance between two databases $x$ and $y$ is $\norm{x - y}_1$.
+\end{definition}
+
+It is worth noting that if the distance between two databases $x$ and $y$ equals $1$, then these databases differ in the count of exactly one element.
+
+\begin{definition}[{Differential privacy~\cite{algFound}}]
+\label{def:app_diff_privacy}
+A randomized algorithm $\mathcal{M}$ with domain $\N^{\abs{\mathcal{X}}}$ is $(\varepsilon, \delta)$-differentially private if for all $S \subseteq \Range(\mathcal{M})$ and for all $x, y \in \N^{\abs{\mathcal{X}}}$ such that $\norm{x - y}_1 \leq 1$:
+\[
+\Pr[\mathcal{M}(x) \in S] \leq e^{\varepsilon} \Pr[\mathcal{M}(y) \in S] + \delta.
+\]
+\end{definition}
+
+Intuitively, the definition of differential privacy can be interpreted as follows. Suppose there is a database $x \in \N^{\mathcal{X}}$ to which we do not have direct access, and the algorithm $\mathcal{M}$ is differentially private. Then, regardless of whether a specific element $p$ is present in the database or not, analyzing the result $\mathcal{M}(x)$ does not allow us to determine with high probability whether $p$ was present in the database.
+
+When $\delta = 0$, we speak of \emph{pure differential privacy}; when $\delta > 0$, we speak of \emph{approximate differential privacy}. Unlike pure differential privacy, approximate differential privacy allows a small risk of a privacy breach, which depends on the value of the parameter $\delta$.
+
+\begin{theorem}[{Post-processing~\cite[p.~19]{algFound}}]
+Let $\mathcal{M} : \N^{\abs{\mathcal{X}}} \rightarrow R$ be a randomized algorithm that is $(\varepsilon, \delta)$-differentially private. Let $f : R \rightarrow R'$ be an arbitrary randomized mapping. Then $f \circ \mathcal{M} : \N^{\abs{\mathcal{X}}} \rightarrow R'$ is $(\varepsilon, \delta)$-differentially private.
+\end{theorem}
+
+This theorem implies that any further processing of the output of a differentially private algorithm is safe and does not disclose more private information about the users.
+
+\begin{theorem}[{Group privacy~\cite[p.~20]{algFound}}]
+Any $(\varepsilon, 0)$-differentially private mechanism $\mathcal{M}$ is $(k\varepsilon, 0)$-differentially private for groups of size $k$. That is, for all $x, y \in \N^{\abs{\mathcal{X}}}$ such that $\norm{x - y}_1 \leq k$ and all $S \subseteq \Range(\mathcal{M})$:
+\[
+\Pr[\mathcal{M}(x) \in S] \leq e^{k\varepsilon} \Pr[\mathcal{M}(y) \in S].
+\]
+\end{theorem}
+
+This theorem implies that differential privacy also protects databases that differ in more than one element, but at the expense of a higher risk of revealing private information.
+
+\begin{theorem}[{Basic composition~\cite[p.~42]{algFound}}]
+\label{thm:basic_composition}
+Let $\mathcal{M}_1 : \N^{\abs{\mathcal{X}}} \rightarrow R_1$ be an $\varepsilon_1$-differentially private algorithm, and let $\mathcal{M}_2 : \N^{\abs{\mathcal{X}}} \rightarrow R_2$ be an $\varepsilon_2$-differentially private algorithm. Then their combination, defined to be $\mathcal{M}_{1,2} : \N^{\abs{\mathcal{X}}} \rightarrow R_1 \times R_2$ by the mapping $\mathcal{M}_{1,2}(x) = (\mathcal{M}_1(x), \mathcal{M}_2(x))$, is $(\varepsilon_1 + \varepsilon_2)$-differentially private.
+\end{theorem}
+
+It follows from this theorem that a composition of several differentially private mechanisms is also differentially private, but its level of privacy protection decreases with the number of composed mechanisms and depends on their individual parameters.
+
+\begin{theorem}[{Advanced composition~\cite[p.~52]{algFound}}]
+\label{thm:advanced_composition}
+Given target privacy parameters $0 < \varepsilon' < 1$ and $\delta' > 0$, to ensure $(\varepsilon', k\delta + \delta')$ cumulative privacy loss over $k$ mechanisms, it suffices that each mechanism is $(\varepsilon, \delta)$-differentially private, where
+\[
+\varepsilon = \frac{\varepsilon'}{2 \sqrt{2 k \ln(1/\delta')}}.
+\]
+\end{theorem}
+
+It follows from Theorem~\ref{thm:basic_composition} that if there are $k$ mechanisms $\mathcal{M}_i$, each of them $\varepsilon_i$-differentially private, then for their composition to be $\varepsilon$-differentially private, the sum of the $\varepsilon_i$ must not exceed $\varepsilon$. This condition is satisfied, for example, when $\varepsilon_i = \frac{\varepsilon}{k}$. Unfortunately, for a large number of mechanisms, each mechanism $\mathcal{M}_i$ then has a very small value of $\varepsilon_i$, which can lead to significant inaccuracies. Theorem~\ref{thm:advanced_composition} allows us to use approximate differential privacy in such a way that it suffices for each mechanism $\mathcal{M}_i$ to be $\varepsilon_i$-differentially private with $\varepsilon_i \approx \frac{\varepsilon}{\sqrt{k}}$.
+
+The following definitions introduce the basic method of making an algorithm differentially private.
+
+\begin{definition}[{$\ell_1$-sensitivity~\cite[p.~31]{algFound}}]
+\label{def:sensitivity_def}
+The $\ell_1$-sensitivity of a function $f : \N^{\abs{\mathcal{X}}} \rightarrow \R^k$ is
+\[
+\Delta f = \max_{\substack{x, y \in \N^{\abs{\mathcal{X}}} \\ \norm{x - y}_1 = 1}} \norm{f(x) - f(y)}_1.
+\]
+\end{definition}
+
+\begin{definition}[{Laplace distribution~\cite[p.~31]{algFound}}]
+The Laplace distribution (centered at $0$) with scale $b$ is the distribution with probability density function
+\[
+\Lap(x \mid b) = \frac{1}{2b} \exp\left( -\frac{\abs{x}}{b} \right).
+\]
+We will write $\Lap(b)$ to denote the Laplace distribution with scale $b$.
+\end{definition}
+
+\begin{definition}[{Laplace mechanism~\cite[p.~32]{algFound}}]
+Given any function $f : \N^{\abs{\mathcal{X}}} \rightarrow \R^k$, the Laplace mechanism is defined as
+\[
+\mathcal{M}_L(x, f(\cdot), \varepsilon) = f(x) + (Y_1, \ldots, Y_k),
+\]
+where $Y_i$ are independent random variables drawn from $\Lap(\Delta f / \varepsilon)$.
+\end{definition}
+
+\begin{theorem}[{\cite{algFound}}]
+The Laplace mechanism preserves $(\varepsilon, 0)$-differential privacy.
+\end{theorem}
+
+The Laplace mechanism adds noise drawn from the Laplace distribution to the output of an algorithm. It makes any algorithm differentially private, provided that we can determine the sensitivity of that algorithm, as defined above.

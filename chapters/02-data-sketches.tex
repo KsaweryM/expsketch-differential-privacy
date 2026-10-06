@@ -1,0 +1,90 @@
+\chapter{An introduction to data sketches}
+\label{chap:sketches}
+
+\section{General description of data sketches}
+
+For very large datasets, some algorithms may become impractical. A data sketch is a compact summary of a dataset that, for specific problems, allows us to obtain approximate solutions. The computational cost of creating a data sketch and of computing estimates from it is much lower than that of traditional exact algorithms. The accuracy of an estimate obtained from a data sketch depends on the amount of memory reserved for the sketch. For data sketches, there are mathematical results that relate the amount of memory reserved for the sketch to the accuracy of the estimation; an example of such an analysis for the HyperLogLog sketch is given in~\cite{HyperLogLog}. Data sketches are built by online algorithms, which means that the sketch is continuously updated in real time as new data arrives from the stream (Figure~\ref{fig:what_is_sketch}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=3in]{what-is-data-sketch}
+  \caption{Data sketch usage diagram.}
+  \label{fig:what_is_sketch}
+\end{figure}
+
+A primary example of the use of data sketches is counting the number of distinct elements in a data stream. The data stream can be defined as a multiset $\mathfrak{M} = (\mathbb{U}, f)$, where $\mathbb{U}$ is a set of unknown size $n = \abs{\mathbb{U}}$, and the function $f : \mathbb{U} \rightarrow \N_{+}$ gives the multiplicity of each element of the multiset. An example of a data sketch used to estimate the number of distinct elements in a data stream is MinCount (Algorithm~\ref{alg:mincount}).
+
+\begin{algorithm}[htbp]
+\caption{MinCount($\mathfrak{M}, k$)}
+\label{alg:mincount}
+\begin{algorithmic}[1]
+\State \textbf{Initialization:}
+\State Set each of the $k$ positions of the data sketch $\mathbf{M} = (\mathbf{M}_1, \ldots, \mathbf{M}_k)$ to $\infty$
+\State
+\State \textbf{Update the data sketch $\mathbf{M}$ with the elements of the data stream $\mathfrak{M}$:}
+\ForAll{$x \in \mathfrak{M}$}
+    \If{$\mathcal{H}(x) < \mathbf{M}_k$ and $\mathcal{H}(x) \notin \mathbf{M}$} \Comment{hash $\mathcal{H}(x) \in [0, 1)$}
+        \State $\mathbf{M}_k \gets \mathcal{H}(x)$
+        \State sort($\mathbf{M}$) \Comment{sort $\mathbf{M}$ in ascending order}
+    \EndIf
+\EndFor
+\State
+\State \textbf{Estimate the number of distinct elements in the data stream $\mathfrak{M}$:}
+\If{$\mathbf{M}_k = \infty$}
+    \State \Return $\abs{\{i : \mathbf{M}_i \neq \infty\}}$
+\Else
+    \State \Return $\frac{k - 1}{\mathbf{M}_k}$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+Another example of a data sketch is the FM sketch. It is described in more detail below, because Chapter~\ref{chap:overview_of_articles} discusses scientific papers based on this sketch. The FM sketch can be useful in the following scenario. Suppose there is a group of users and a set of access points. Any user can connect multiple times to any of the access points. Each access point can use an FM sketch to estimate the number of distinct users who have connected to it.
+
+\section{Introduction to the FM sketch}
+
+The operation of the FM sketch is presented in Figure~\ref{fig:FM_sketch}. Initially, the FM sketch is an array of $m$ fields set to zero. When a user connects to an access point, the user's ID is hashed by a function $h_1$ to an index of the array, and the corresponding field is set to one. The values of $h_1$ follow a geometric distribution. When a number of users have connected to the access point and its owner decides to compute an estimate from the sketch, the length $L$ of the uninterrupted sequence of ones starting at the first index of the array is measured. The number of users is estimated as $C = \frac{2^L}{\phi}$, where $\phi$ is a constant.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=4in]{FM_data_sketch}
+  \caption{FM sketch.}
+  \label{fig:FM_sketch}
+\end{figure}
+
+Let us assume that the sketch $FM_i$ was created from the elements of the multiset $\mathfrak{M}_i$, and the sketch $FM_j$ was created from the multiset $\mathfrak{M}_j$. The operation $\merge(FM_i, FM_j)$ returns the data sketch that would be created from the elements of the union of the multisets $\mathfrak{M}_i$ and $\mathfrak{M}_j$. If $FM_i$ is the sketch of access point $i$ and $FM_j$ is the sketch of access point $j$, then the estimate computed from $\merge(FM_i, FM_j)$ approximates the number of users who used access point $i$ or access point $j$. The merge operation on FM sketches is very simple: it suffices to compute the bitwise OR of the corresponding fields of $FM_i$ and $FM_j$ (Figure~\ref{fig:FM_merge}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=4in]{merge_FM_sketch}
+  \caption{Merge operation of two FM sketches.}
+  \label{fig:FM_merge}
+\end{figure}
+
+The accuracy of the sketch can be improved by combining $k$ instances of the basic FM sketch with an additional hash function $h_2$ whose values are uniformly distributed over $\{1, \ldots, k\}$ (Figure~\ref{fig:Extended_FM_sketch}). When a user connects to an access point that uses the extended FM sketch, one of the $k$ basic FM sketches is first selected by computing $h_2(\mathrm{ID})$. Then, within this sketch, the user's ID is assigned to a field by the function $h_1$, as before. Each of the basic sketches stores a sequence of zeros and ones in its array. To compute an estimate, the length $L_i$ of the initial sequence of ones is read from each of the $k$ basic sketches, and the number of users is estimated as
+\[
+C = \frac{k \cdot 2^{\frac{1}{k}\sum_{i=1}^{k} L_i}}{\phi}.
+\]
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=4in]{extended_FM}
+  \caption{Extended FM sketch.}
+  \label{fig:Extended_FM_sketch}
+\end{figure}
+
+The merge operation on extended sketches $FM_i$ and $FM_j$ performs the basic merge operation on each pair of corresponding components of $FM_i$ and $FM_j$ (Figure~\ref{fig:extended_FM_merge}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=5.5in]{extended_merge_FM}
+  \caption{Merge operation of two extended FM sketches.}
+  \label{fig:extended_FM_merge}
+\end{figure}
+
+The extended FM sketch can be interpreted as a $k \times m$ binary matrix in which each row is a basic FM sketch. The merge operation of two such sketches corresponds to the OR operation on the corresponding entries of the matrices:
+\begin{gather*}
+\mathbf{FM}_1 = \left[ a_{ij} \right]_{(i, j) \in [1, k] \times [1, m]}, \qquad
+\mathbf{FM}_2 = \left[ b_{ij} \right]_{(i, j) \in [1, k] \times [1, m]}, \\
+\merge(\mathbf{FM}_1, \mathbf{FM}_2) = \left[ c_{ij} \right]_{(i, j) \in [1, k] \times [1, m]},
+\end{gather*}
+where $a_{ij}, b_{ij} \in \{0, 1\}$ and $c_{ij} = a_{ij} \lor b_{ij}$.

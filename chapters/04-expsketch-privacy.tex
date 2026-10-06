@@ -1,0 +1,413 @@
+\chapter{Privacy analysis of the Exponential Sketch}
+\label{chap:expSketch}
+
+\section{Introduction to the Exponential Sketch}
+
+The ExpSketch data sketch is used to estimate the sum of the attributes of the unique elements of a data stream. The algorithm is presented in Algorithm~\ref{alg:expsketch_} and is based on the properties of exponential random variables. A detailed description of the algorithm can be found in~\cite{On_the_algebra_of_data_sketches}.
+
+\begin{algorithm}[htbp]
+\caption{ExpSketch($\mathfrak{M}, m$)}
+\label{alg:expsketch_}
+\begin{algorithmic}[1]
+\State \textbf{Initialization:}
+\State Set each of the $m$ positions of the data sketch $\mathbf{M} = (\mathbf{M}_1, \ldots, \mathbf{M}_m)$ to $\infty$
+\State
+\State \textbf{Update the data sketch $\mathbf{M}$ with the elements of the data stream $\mathfrak{M}$:}
+\ForAll{$(i, \lambda_i) \in \mathfrak{M}$}
+    \ForAll{$j \in \{1, 2, \ldots, m\}$}
+        \State $U_{i,j} \gets \mathcal{H}(i \mathbin{\|} j)$ \Comment{hash $\mathcal{H}(x) \in [0, 1)$} \label{line:generate_uniform_random_value}
+        \State $S_{i,j} \gets -\frac{\ln(U_{i,j})}{\lambda_i}$ \label{line:generate_exponential_random_value}
+        \State $\mathbf{M}_j \gets \min \{\mathbf{M}_j, S_{i,j}\}$ \label{line:generate_new_exponential_random_value}
+    \EndFor
+\EndFor
+\State
+\State \textbf{Estimate the sum of the attributes of unique elements in $\mathfrak{M}$:}
+\State \Return $\frac{m-1}{\sum_{k=1}^{m} \mathbf{M}_k}$
+\end{algorithmic}
+\end{algorithm}
+
+In simple terms, the data sketch consists of a vector $\mathbf{M}$ of length $m$. While the data stream is processed, the values of the fields of $\mathbf{M}$ can only decrease. After all elements of the stream have been processed, the sum of the attributes of the unique elements of the stream is estimated from the vector $\mathbf{M}$.
+
+For each element of the data stream, the algorithm iterates over all fields of the vector $\mathbf{M}$ and attempts to update them. An update consists of generating a value from a particular exponential distribution and assigning it to the corresponding field of $\mathbf{M}$ if it is smaller than the value currently stored in this field. For identical elements of the data stream, the same values are generated. Hence, only the first occurrence of a given element can update the fields of $\mathbf{M}$, and repetitions of elements in the data stream are ignored.
+
+Let us assume that the data sketch has already processed the first $k$ unique elements of the data stream and that a new unique element $(k+1, \lambda_{k+1})$ arrives. Based on the new element, the algorithm sequentially attempts to update the fields of $\mathbf{M}$. Suppose that the algorithm is updating the $j$-th field of $\mathbf{M}$. In line~\ref{line:generate_uniform_random_value}, a value from the uniform distribution is generated. In line~\ref{line:generate_exponential_random_value}, this value is used to generate a value from the exponential distribution $\Exp(\lambda_{k+1})$. At this point, the value stored in the $j$-th field of $\mathbf{M}$ is a random variable with distribution $\Exp\bigl(\sum_{i=1}^{k} \lambda_i\bigr)$, where $\sum_{i=1}^{k} \lambda_i$ is the sum of the attributes of all unique elements encountered in the stream so far.
+
+After line~\ref{line:generate_new_exponential_random_value}, the $j$-th field of $\mathbf{M}$ has the distribution $\Exp\bigl(\sum_{i=1}^{k+1} \lambda_i\bigr)$. This is because for any two independent exponential random variables $X_1 \sim \Exp(S_1)$ and $X_2 \sim \Exp(S_2)$, the random variable $\min(X_1, X_2)$ has the distribution $\Exp(S_1 + S_2)$. After all $k+1$ elements of the data stream have been processed, the fields of $\mathbf{M}$ store independent values drawn from $\Exp\bigl(\sum_{i=1}^{k+1} \lambda_i\bigr)$. The expected value of a random variable with this distribution is $\bigl(\sum_{i=1}^{k+1} \lambda_i\bigr)^{-1}$. Therefore, the expected value of each field of $\mathbf{M}$ is the inverse of the sum of the attributes of the unique elements of the data stream. The average of the fields has the same expected value but a smaller variance. To estimate the sum of the attributes of the unique elements of the stream, it therefore suffices to compute the inverse of the average of the fields of $\mathbf{M}$ (with the bias correction $m - 1$ in place of $m$).
+
+\section{Sensitivity of the Exponential Sketch to new elements of the data stream}
+
+Assuming that the data sketch $\mathbf{M}$ has already processed some elements of the data stream, this section analyzes the impact of a new element of the stream on the values stored in $\mathbf{M}$. We begin with a single field of $\mathbf{M}$. Let us assume that the data sketch has processed $k$ unique elements. The field $\mathbf{M}_j$ stores a value with distribution $\min\bigl(\Exp(\lambda_1), \ldots, \Exp(\lambda_k)\bigr)$, which equals $\Exp\bigl(\sum_{i=1}^{k} \lambda_i\bigr)$. Adding a new unique element causes the field to store a value with distribution $\min\bigl(\Exp(\lambda_1), \ldots, \Exp(\lambda_{k+1})\bigr)$. The probability that the field changes its value equals the probability that $X_1 \geq X_2$ for $X_1 \sim \Exp\bigl(\sum_{i=1}^{k} \lambda_i\bigr)$ and $X_2 \sim \Exp(\lambda_{k+1})$:
+\[
+P[X_1 \geq X_2] = \frac{\lambda_{k+1}}{\sum_{i=1}^{k+1} \lambda_i}.
+\]
+
+The field $\mathbf{M}_j$ has the distribution $\Exp\bigl(\sum_{i=1}^{k} \lambda_i\bigr)$, and the new candidate value $\mathbf{M}'_j$ that may overwrite it has the distribution $\Exp(\lambda_{k+1})$. The probability that at least one of the $m$ fields of $\mathbf{M}$ changes is
+\begin{align*}
+P\left[\mathbf{M}_1 \geq \mathbf{M}'_1 \lor \ldots \lor \mathbf{M}_m \geq \mathbf{M}'_m\right]
+  &= 1 - \prod_{j=1}^m P\left[\mathbf{M}_j < \mathbf{M}'_j\right] \\
+  &= 1 - P\left[\mathbf{M}_1 < \mathbf{M}'_1\right]^m \\
+  &= 1 - \left(\frac{\sum_{i=1}^{k} \lambda_i}{\sum_{i=1}^{k+1} \lambda_i}\right)^m.
+\end{align*}
+The above refers to the probability that the fields of $\mathbf{M}$ change by any amount. In the context of differential privacy, users' privacy would be compromised if changing a single element of the data stream significantly altered the values of the fields of $\mathbf{M}$.
+
+Let us now calculate the probability that changing one element of the data stream alters the value of a single field of the data sketch by at least $T$. First, let us examine the random variable $Y$ defined as the difference of two independent random variables $X_1 \sim \Exp(\lambda_A)$ and $X_2 \sim \Exp(\lambda_B)$:
+\[
+Y = X_1 - X_2.
+\]
+The probability density function of the exponential distribution is
+\[
+f_\lambda(x) =
+\begin{cases}
+  \lambda e^{-\lambda x} & \text{for } x \geq 0, \\
+  0 & \text{for } x < 0,
+\end{cases}
+\]
+and the joint probability density function of $X_1$ and $X_2$ is
+\[
+f_{\lambda_A \lambda_B}(x_1, x_2) =
+\begin{cases}
+  \lambda_A \lambda_B e^{-\lambda_A x_1} e^{-\lambda_B x_2} & \text{for } x_1 \geq 0 \land x_2 \geq 0, \\
+  0 & \text{otherwise.}
+\end{cases}
+\]
+For $T \geq 0$ we obtain
+\begin{align*}
+P\bigl(Y \in (-\infty, -T)\bigr) &= P(X_1 - X_2 < -T) = P(X_2 > X_1 + T) \\
+  &= \int_{0}^{\infty} \int_{x_1+T}^{\infty} f_{\lambda_A\lambda_B}(x_1, x_2) \dd x_2 \dd x_1 \\
+  &= \int_{0}^{\infty} \int_{x_1+T}^{\infty} \lambda_A\lambda_B e^{-\lambda_A x_1} e^{-\lambda_B x_2} \dd x_2 \dd x_1 \\
+  &= e^{-\lambda_B T} \frac{\lambda_A}{\lambda_A + \lambda_B},
+\end{align*}
+and
+\begin{align*}
+P\bigl(Y \in (T, \infty)\bigr) &= P(X_1 - X_2 > T) = P(X_1 > X_2 + T) \\
+  &= \int_{T}^{\infty} \int_{0}^{x_1 - T} f_{\lambda_A\lambda_B}(x_1, x_2) \dd x_2 \dd x_1 \\
+  &= \int_{T}^{\infty} \int_{0}^{x_1 - T} \lambda_A\lambda_B e^{-\lambda_A x_1} e^{-\lambda_B x_2} \dd x_2 \dd x_1 \\
+  &= e^{-\lambda_A T} \frac{\lambda_B}{\lambda_A + \lambda_B}.
+\end{align*}
+
+Let us assume that we have two data streams that differ only in the $i$-th element. We may also assume that the streams contain only unique elements, since repeated elements are ignored. The first stream is
+\[
+\lambda_1, \ldots, \lambda_{i-1}, \lambda_{i}, \lambda_{i+1}, \ldots, \lambda_{n}
+\]
+and the second stream is
+\[
+\lambda_1, \ldots, \lambda_{i-1}, \lambda_{i}', \lambda_{i+1}, \ldots, \lambda_{n}.
+\]
+The sum of the attributes of the first stream is $\Lambda = \sum_{i=1}^{n} \lambda_i$, and the sum of the attributes of the second stream is $\Lambda' = \Lambda - \lambda_{i} + \lambda_{i}' = \Lambda + \Delta$. The first stream corresponds to the random variable $X_1 \sim \Exp(\Lambda)$, and the second to the random variable $X_2 \sim \Exp(\Lambda')$. Hence
+\begin{align*}
+P(\abs{X_1 - X_2} \geq T) &= P\bigl(X_1 - X_2 \in (-\infty, -T]\bigr) + P\bigl(X_1 - X_2 \in [T, \infty)\bigr) \\
+  &= e^{-\Lambda' T}\frac{\Lambda}{\Lambda + \Lambda'} + e^{-\Lambda T} \frac{\Lambda'}{\Lambda + \Lambda'}.
+\end{align*}
+
+If the $i$-th element has only a small impact on the sum of the attributes of the streams ($\Lambda \approx \Lambda'$), then the probability that the distance between $\mathbf{M}_j$ and $\mathbf{M}_j'$ exceeds $T$ can be approximated by $e^{-\Lambda T}$.
+
+The standard method of making an algorithm $f$ differentially private is to add Laplace noise $\Lap(\Delta f / \varepsilon)$, where $\Delta f$ is the sensitivity of $f$. According to Definition~\ref{def:sensitivity_def}, the sensitivity of $f$ is the maximum distance between the outputs of $f$ for two neighboring datasets. This method cannot be applied to ExpSketch, because $\Delta f = \infty$, so a different approach is necessary. Fortunately, as shown above, large changes for neighboring datasets are extremely rare: a single element causes a noticeable change of the output only if it significantly changes the total sum of the attributes of the unique elements in the dataset.
+
+\section{Differential privacy of the Exponential Sketch}
+
+Unfortunately, the method from~\cite{Order_Invariant_Cardinality_Estimators_Are_Differentially_Private} cannot be applied directly to ExpSketch, because ExpSketch is not a cardinality estimator and is not strictly hash-based. The hash-based property is defined in such a way that the data sketch never uses the elements of the data stream directly, but only their hashes. This condition is satisfied, for example, by the MinCount sketch, where the elements are used only to compute their hashes. ExpSketch, in contrast, uses both the hashes and the attributes of the elements. The hash-based property is used many times in the proof of the method, so generalizing it to sketches that are not hash-based seems very challenging.
+
+Interestingly, the modification of ExpSketch presented in Algorithm~\ref{alg:df_expsketch} resembles the method based on Theorem~\ref{theorem:general_DF_theorem}. Instead of adding $\frac{k_{\max}}{1 - e^{-\varepsilon}}$ unique elements to the data sketch, as required by the first condition of that theorem, the modified ExpSketch adds a single large element with attribute $\frac{\lmax}{e^\varepsilon - 1}$. Alternatively, the modification could add $\frac{\lmax}{e^\varepsilon - 1}$ unique elements with attributes equal to $1$.
+
+This similarity may come from the fact that if the data stream processed by ExpSketch consists of unique elements (in terms of identifiers) whose attributes are all equal to $1$, then ExpSketch can reasonably be regarded as a hash-based cardinality estimator. In that case, ExpSketch would belong to the class of algorithms covered by Theorem~\ref{theorem:general_DF_theorem}.
+
+Algorithm~\ref{alg:df_expsketch} is our proposal for implementing differential privacy in ExpSketch. First, the data stream is modified. Subsequently, the basic ExpSketch algorithm builds a data sketch from the modified data stream. Finally, the resulting data sketch is also slightly modified. Thus, differential privacy is ensured by modifying both the input and the output of ExpSketch. The algorithm requires two additional parameters: $\lmax$ and $\varepsilon$.
+
+In line~\ref{line:df_expsketch_modify_1}, the data stream is modified: attributes exceeding the limit $\lmax$ are reduced to this limit, and a new element with a unique identifier and a very large attribute is added. Subsequently, in line~\ref{line:df_expsketch_modify_2}, the basic version of ExpSketch is run on the modified data stream. The result is the vector $\mathbf{M}$, which can be used to estimate the sum of the attributes of unique elements; however, an estimate computed from this vector would not yet be differentially private. In line~\ref{line:df_expsketch_modify_3}, each field of $\mathbf{M}$ that exceeds the limit $\thr$ is reduced to this limit. This does not significantly affect the estimate if the sum of the attributes of unique elements in the original data stream is much greater than $\frac{\lmax}{\varepsilon}$. From this point on, the modified vector $\mathbf{M}'$ is differentially private, and so is any further processing of it. In line~\ref{line:df_expsketch_modify_4}, an estimate is computed from $\mathbf{M}'$ and reduced by the attribute of the artificial element added in line~\ref{line:df_expsketch_modify_1}.
+
+\begin{algorithm}[htbp]
+\caption{DP-ExpSketch($\mathfrak{M}, m, \lmax, \varepsilon$)}
+\label{alg:df_expsketch}
+\begin{algorithmic}[1]
+\State \textbf{Modify $\mathfrak{M}$ (a preliminary step ensuring differential privacy):}
+\State $\mathfrak{M}' \gets \left\{ \left(\text{unique identifier}, \frac{\lmax}{e^\varepsilon - 1}\right) \right\} \cup \left\{ \bigl(i, \min(\lambda_i, \lmax)\bigr) : (i,\lambda_i) \in \mathfrak{M} \right\}$ \label{line:df_expsketch_modify_1}
+\State
+\State \textbf{Build the data sketch from the modified data stream $\mathfrak{M}'$:}
+\State $\mathbf{M} \gets \mathrm{ExpSketch}(\mathfrak{M}', m)$ \label{line:df_expsketch_modify_2}
+\State
+\State \textbf{After the following modification, the privacy conditions are satisfied:}
+\ForAll{$i \in \{1, 2, \ldots, m\}$}
+    \State $\mathbf{M}'_{i} \gets \min\left(\mathbf{M}_{i}, \thr\right)$ \label{line:df_expsketch_modify_3}
+\EndFor
+\State
+\State \textbf{Estimate the sum of the attributes of unique elements in $\mathfrak{M}$:}
+\State \Return $\frac{m-1}{\sum_{k=1}^{m} \mathbf{M}'_k} - \frac{\lmax}{e^\varepsilon - 1}$ \label{line:df_expsketch_modify_4}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}
+\label{theorem:DP-ExpSketch}
+DP-ExpSketch is $(m\varepsilon, 0)$-differentially private, where $m$ is the size of the sketch.
+\end{theorem}
+
+\section{Proof of differential privacy of the modified Exponential Sketch}
+
+Let us assume that there are two data streams $\mathfrak{M}_1$ and $\mathfrak{M}_2$ differing in one element: the stream $\mathfrak{M}_1$ contains the element $(i, \lambda_i)$, and the stream $\mathfrak{M}_2$ contains the element $(i, \lambda_i')$. Without loss of generality, we can assume that the streams contain only unique elements, since repeated elements are ignored. The possible outputs of DP-ExpSketch for both streams are vectors of $m$ positive real numbers. For brevity, let $\mathcal{A}_m(\mathfrak{M})$ denote $\text{DP-ExpSketch}(\mathfrak{M}, m, \lmax, \varepsilon)$. Let $S$ be a subset of the possible outputs of DP-ExpSketch. We would like to prove that
+\[
+P\bigl(\mathcal{A}_m(\mathfrak{M}_1) \in S\bigr) \leq e^{m\varepsilon} P\bigl(\mathcal{A}_m(\mathfrak{M}_2) \in S\bigr).
+\]
+
+\subsection{Proof for one-dimensional vectors}
+
+Let us first prove that DP-ExpSketch is differentially private for $m = 1$, that is, when it returns one-dimensional vectors. Let $\Lambda$ denote the sum of the attributes of the unique elements of the modified data stream $\mathfrak{M}_1$, and let $X_1$ be a random variable with distribution $\Exp(\Lambda)$. Similarly, let $\Lambda'$ denote the sum of the attributes of the unique elements of the modified data stream $\mathfrak{M}_2$, and let $X_2$ be a random variable with distribution $\Exp(\Lambda')$. Then $\mathcal{A}_1(\mathfrak{M}_1)$ and $\mathcal{A}_1(\mathfrak{M}_2)$ correspond to the random variables $\min\left(X_1, \thr\right)$ and $\min\left(X_2, \thr\right)$, respectively. The probability $P\bigl(\mathcal{A}_1(\mathfrak{M}_1) \in S\bigr)$ depends on whether $\thr$ belongs to $S$. Let us consider two cases.
+
+\begin{enumerate}[label=\arabic*., topsep=10pt]
+\item Assume that $\thr \notin S$. We first prove that
+\begin{equation}
+\min\left(X_1, \thr \right) \in S \iff X_1 \in S \cap \left(0, \thr\right).
+\label{eq:equivalence}
+\end{equation}
+\begin{enumerate}[label=(\alph*)]
+  \item Assume that the left-hand side of~\eqref{eq:equivalence} is true, i.e.\ $\min\left(X_1, \thr \right) \in S$. Then $X_1 < \thr$, because otherwise
+  \[
+  \min\left(X_1, \thr \right) = \thr \in S,
+  \]
+  which contradicts the assumption that $\thr \notin S$. Consequently,
+  \[
+  \min\left(X_1, \thr \right) = X_1 \in S \quad\text{and}\quad X_1 < \thr,
+  \]
+  hence $X_1 \in S \cap \left(0, \thr\right)$. This proves the implication
+  \begin{equation}
+  \min\left(X_1, \thr \right) \in S \implies X_1 \in S \cap \left(0, \thr\right).
+  \label{eq:right_equivalence}
+  \end{equation}
+
+  \item Assume that the right-hand side of~\eqref{eq:equivalence} is true, i.e.\ $X_1 \in S \cap \left(0, \thr\right)$. Then $X_1 < \thr$ and $X_1 \in S$, so
+  \[
+  \min\left(X_1, \thr \right) = X_1 \in S.
+  \]
+  This proves the implication
+  \begin{equation}
+  \min\left(X_1, \thr \right) \in S \impliedby X_1 \in S \cap \left(0, \thr\right).
+  \label{eq:left_equivalence}
+  \end{equation}
+\end{enumerate}
+From the implications~\eqref{eq:right_equivalence} and~\eqref{eq:left_equivalence}, the equivalence~\eqref{eq:equivalence} holds. It follows that
+\begin{equation}
+P\left(\min\left(X_1, \thr \right) \in S \right) = P\left(X_1 \in S \cap \left(0, \thr\right) \right).
+\label{eq:Probability_min}
+\end{equation}
+Since $X_1$ has the exponential distribution $\Exp(\Lambda)$, the probability~\eqref{eq:Probability_min} is equal to
+\begin{equation}
+P\left(\min\left(X_1, \thr \right) \in S \right) = \int_{S \cap \left(0, \thr\right)} \Lambda e^{-\Lambda x} \dd x.
+\label{eq:Probability_min_2}
+\end{equation}
+
+\item Assume now that $\thr \in S$. Then
+\begin{equation}
+\begin{split}
+P\left(\min\left(X_1, \thr \right) \in S \right)
+  &= P\left(\min\left(X_1, \thr \right) \in S \setminus \left\{\thr\right\} \right) \\
+  &\quad + P\left(\min\left(X_1, \thr \right) = \thr \right).
+\end{split}
+\label{eq:Probability_min_3}
+\end{equation}
+By the previous case, the first term of the sum~\eqref{eq:Probability_min_3} is equal to
+\begin{equation}
+P\left(\min\left(X_1, \thr \right) \in S \setminus \left\{\thr\right\} \right) = \int_{S \cap \left(0, \thr\right)} \Lambda e^{-\Lambda x} \dd x.
+\label{eq:Probability_min_4}
+\end{equation}
+Using the cumulative distribution function of the exponential distribution, the second term of the sum~\eqref{eq:Probability_min_3} is equal to
+\begin{equation}
+\begin{split}
+P\left(\min\left(X_1, \thr \right) = \thr \right) &= P\left(X_1 \geq \thr \right) \\
+  &= 1 - P\left(X_1 < \thr \right) = e^{-\Lambda\thr}.
+\end{split}
+\label{eq:Probability_min_6}
+\end{equation}
+From~\eqref{eq:Probability_min_3}, \eqref{eq:Probability_min_4} and~\eqref{eq:Probability_min_6} we obtain
+\begin{equation}
+P\left(\min\left(X_1, \thr \right) \in S \right) = \int_{S \cap \left(0, \thr\right)} \Lambda e^{-\Lambda x} \dd x + e^{-\Lambda\thr}.
+\label{eq:Probability_min_23}
+\end{equation}
+\end{enumerate}
+
+Based on~\eqref{eq:Probability_min_2} and~\eqref{eq:Probability_min_23}, the probability that the output of DP-ExpSketch belongs to $S$ can be expressed as
+\begin{equation}
+\label{eq:probability}
+P\bigl(\mathcal{A}_1(\mathfrak{M}_1) \in S \bigr) =
+\begin{cases}
+  \displaystyle\int_{S \cap \left(0, \thr\right)} \Lambda e^{-\Lambda x} \dd x + e^{-\Lambda\thr} & \text{if } \thr \in S, \\[2ex]
+  \displaystyle\int_{S \cap \left(0, \thr\right)} \Lambda e^{-\Lambda x} \dd x & \text{if } \thr \notin S,
+\end{cases}
+\end{equation}
+and analogously
+\begin{equation}
+\label{eq:probability2}
+P\bigl(\mathcal{A}_1(\mathfrak{M}_2) \in S \bigr) =
+\begin{cases}
+  \displaystyle\int_{S \cap \left(0, \thr\right)} \Lambda' e^{-\Lambda' x} \dd x + e^{-\Lambda'\thr} & \text{if } \thr \in S, \\[2ex]
+  \displaystyle\int_{S \cap \left(0, \thr\right)} \Lambda' e^{-\Lambda' x} \dd x & \text{if } \thr \notin S.
+\end{cases}
+\end{equation}
+
+To complete the proof of differential privacy in the one-dimensional case, we still need an additional inequality, which follows from the modifications introduced in DP-ExpSketch.
+
+\subsubsection{Inequality resulting from the modification of the Exponential Sketch}
+\label{sssec:delta2}
+
+In line~\ref{line:df_expsketch_modify_1}, the data streams are modified: the attributes of elements exceeding the limit $\lmax$ are reduced to this limit, and an element with a very large attribute $\frac{\lmax}{e^{\varepsilon} - 1}$ is added to both $\mathfrak{M}_1$ and $\mathfrak{M}_2$. These modifications lead to the following important conclusions.
+\begin{enumerate}[label=\arabic*.]
+  \item \label{item:DELTA} Let $\Delta = \Lambda - \Lambda'$ be the difference between the sums of the attributes of unique elements in the modified streams $\mathfrak{M}_1$ and $\mathfrak{M}_2$. Since the modified streams differ in only one element, $\Delta = \min(\lambda_i, \lmax) - \min(\lambda'_i, \lmax)$. Due to the limitation of the attributes in the modified data streams, $-\lmax \leq \Delta \leq \lmax$.
+  \item \label{item:DELTA2} Due to the added element with attribute $\frac{\lmax}{e^{\varepsilon} - 1}$, the sum of the attributes of unique elements in the modified stream $\mathfrak{M}_1$ is not less than $\frac{\lmax}{e^{\varepsilon} - 1}$; the same holds for $\mathfrak{M}_2$. Thus $\Lambda \geq \frac{\lmax}{e^{\varepsilon} - 1}$ and $\Lambda' \geq \frac{\lmax}{e^{\varepsilon} - 1}$, which implies $1 + \frac{\lmax}{\Lambda'} \leq e^{\varepsilon}$ and $1 + \frac{\lmax}{\Lambda} \leq e^{\varepsilon}$.
+  \item The above conclusions can be used to prove that for $x \in S \cap \left(0, \thr\right)$ the inequality $e^{\ln\left(\frac{\Lambda}{\Lambda'}\right) - x\left(\Lambda - \Lambda'\right)} \leq e^{\varepsilon}$ holds. This inequality will be used later in the proof. Let us consider two cases, depending on whether $\Lambda > \Lambda'$.
+  \begin{enumerate}[label=(\alph*)]
+    \item If $\Lambda \leq \Lambda'$, then $\ln\left(\frac{\Lambda}{\Lambda'}\right) \leq 0$. It follows that $e^{\ln\left(\frac{\Lambda}{\Lambda'}\right) - x\left(\Lambda - \Lambda'\right)} \leq e^{-x\left(\Lambda - \Lambda'\right)} = e^{x\left(\Lambda' - \Lambda\right)}$. By conclusion~\ref{item:DELTA}, $\Lambda' - \Lambda = -\Delta \leq \lmax$. Since the function $t \mapsto e^t$ is increasing, $e^{x\left(\Lambda' - \Lambda\right)} \leq e^{x\lmax}$. We assumed that $x \in S \cap \left(0, \thr\right)$, so $x \leq \thr$. Using the monotonicity of $t \mapsto e^t$ again, we obtain $e^{x\lmax} \leq e^{\thr\lmax} = e^{\varepsilon}$.
+
+    \item If $\Lambda > \Lambda'$, then, since $x \in S \cap \left(0, \thr\right)$, we have $x > 0$ and $x(\Lambda - \Lambda') > 0$. By the monotonicity of $t \mapsto e^t$, $e^{\ln\left(\frac{\Lambda}{\Lambda'}\right) - x\left(\Lambda - \Lambda'\right)} \leq e^{\ln\left(\frac{\Lambda}{\Lambda'}\right)} = \frac{\Lambda}{\Lambda'}$. Since $\Delta = \Lambda - \Lambda'$, we have $\frac{\Lambda}{\Lambda'} = \frac{\Lambda' + \Delta}{\Lambda'} = 1 + \frac{\Delta}{\Lambda'}$. By conclusion~\ref{item:DELTA}, $\Delta \leq \lmax$, so $1 + \frac{\Delta}{\Lambda'} \leq 1 + \frac{\lmax}{\Lambda'}$. By conclusion~\ref{item:DELTA2}, $1 + \frac{\lmax}{\Lambda'} \leq e^{\varepsilon}$. Hence $e^{\ln\left(\frac{\Lambda}{\Lambda'}\right) - x\left(\Lambda - \Lambda'\right)} \leq 1 + \frac{\lmax}{\Lambda'} \leq e^{\varepsilon}$.
+  \end{enumerate}
+\end{enumerate}
+We have thus proved the inequality
+\begin{equation}
+\label{eq:probability22}
+e^{\ln\left(\frac{\Lambda}{\Lambda'}\right) - x\left(\Lambda - \Lambda'\right)} \leq e^{\varepsilon} \quad \text{for } x \in S \cap \left(0, \thr\right),
+\end{equation}
+which will be used in the remaining part of the proof.
+
+\subsubsection{Completing the proof for one-dimensional vectors}
+
+Let $x \in S \cap \left(0, \thr\right)$. The left-hand side of inequality~\eqref{eq:probability22} is equal to $\frac{\Lambda e^{-x\Lambda}}{\Lambda' e^{-x\Lambda'}}$, so the inequality $\frac{\Lambda e^{-x\Lambda}}{\Lambda' e^{-x\Lambda'}} \leq e^{\varepsilon}$ also holds. It can be easily transformed into $e^{\varepsilon} \Lambda' e^{-x\Lambda'} - \Lambda e^{-x\Lambda} \geq 0$. Since this inequality holds for every $x \in S \cap \left(0, \thr\right)$,
+\[
+\int_{S \cap \left(0, \thr\right)} \left(e^{\varepsilon} \Lambda' e^{-x\Lambda'} - \Lambda e^{-x\Lambda}\right) \dd x \geq 0.
+\]
+By the linearity of the integral,
+\begin{equation}
+\label{eq:probability3}
+\int_{S \cap \left(0, \thr\right)} \Lambda e^{-x\Lambda} \dd x \leq e^{\varepsilon} \int_{S \cap \left(0, \thr\right)} \Lambda' e^{-x\Lambda'} \dd x.
+\end{equation}
+By~\eqref{eq:probability} and~\eqref{eq:probability2}, the probability that the output of DP-ExpSketch belongs to $S$ depends on whether $\thr \in S$. Let us consider two cases.
+\begin{enumerate}[label=\arabic*.]
+\item Assume that $\thr \notin S$. Applying~\eqref{eq:probability} and~\eqref{eq:probability2} to inequality~\eqref{eq:probability3}, we obtain
+\[
+P\bigl(\mathcal{A}_1(\mathfrak{M}_1) \in S \bigr) \leq e^{\varepsilon} P\bigl(\mathcal{A}_1(\mathfrak{M}_2) \in S \bigr).
+\]
+
+\item Assume that $\thr \in S$. Let us start by proving that
+\begin{equation}
+\label{eq:probability6}
+e^{-\Lambda\thr} \leq e^{\varepsilon} e^{-\Lambda'\thr}.
+\end{equation}
+This inequality is equivalent to $\frac{e^{-\Lambda\thr}}{e^{-\Lambda'\thr}} \leq e^{\varepsilon}$, that is, to $e^{\thr\left(\Lambda' - \Lambda\right)} \leq e^{\varepsilon}$. It holds because, as shown at the beginning of Section~\ref{sssec:delta2}, $\Lambda' - \Lambda = -\Delta \leq \lmax$. Hence inequality~\eqref{eq:probability6} is true. From inequalities~\eqref{eq:probability3} and~\eqref{eq:probability6} it follows that
+\begin{equation}
+\label{eq:probability7}
+\int_{S \cap \left(0, \thr\right)} \Lambda e^{-x\Lambda} \dd x + e^{-\Lambda\thr}
+  \leq e^{\varepsilon}\left(\int_{S \cap \left(0, \thr\right)} \Lambda' e^{-x\Lambda'} \dd x + e^{-\Lambda'\thr}\right).
+\end{equation}
+Applying~\eqref{eq:probability} and~\eqref{eq:probability2} to inequality~\eqref{eq:probability7}, we obtain
+\[
+P\bigl(\mathcal{A}_1(\mathfrak{M}_1) \in S \bigr) \leq e^{\varepsilon} P\bigl(\mathcal{A}_1(\mathfrak{M}_2) \in S \bigr).
+\]
+\end{enumerate}
+
+\subsection{Proof for multi-dimensional vectors}
+
+We have proved that DP-ExpSketch returning one-dimensional vectors is $\varepsilon$-differentially private. The version of the algorithm that returns a vector with $m$ fields is a composition of $m$ independent instances of the one-dimensional DP-ExpSketch, each of which is $\varepsilon$-differentially private. By Theorem~\ref{thm:basic_composition}, DP-ExpSketch returning a vector with $m$ fields is $m\varepsilon$-differentially private. \qed
+
+\section{Reducing noise with the advanced composition theorem}
+
+By applying Theorem~\ref{thm:advanced_composition}, we can replace the pure differentially private version of ExpSketch with an approximately differentially private one. The advantage of such a version is that, if a small risk of privacy leakage is accepted, the amount of noise added to the output can be reduced significantly. Theorem~\ref{thm:advanced_composition} implies that for ExpSketch with $m$ fields to be $(\varepsilon, \delta)$-differentially private, it suffices that each field is generated in an $\varepsilon'$-differentially private manner, where
+\[
+\varepsilon' = \frac{\varepsilon}{2 \sqrt{2 m \ln(1/\delta)}}.
+\]
+Without this theorem, each field would have to be generated in an $\frac{\varepsilon}{m}$-differentially private manner, which would result in significantly more noise. For example, for a small value of $\delta$, such as $\delta = 10^{-3}$, and ExpSketch with $10^6$ fields, each field can be generated in an $\frac{\varepsilon}{7434}$-differentially private manner instead of an $\frac{\varepsilon}{10^6}$-differentially private one. This significantly reduces the noise and increases the accuracy of the answers while maintaining a high level of privacy, at the cost of accepting a small risk of privacy leakage.
+
+\section{The unmodified Exponential Sketch is approximately differentially private for a certain class of data streams}
+
+The aim of this section is to investigate whether the one-dimensional version of ExpSketch, without any modifications, satisfies approximate differential privacy (Definition~\ref{def:app_diff_privacy}). The following theorem shows that if the set of possible data streams is restricted in a certain way, then ExpSketch is approximately differentially private. The proof of Theorem~\ref{thm:my_thorem_22} can be found in Appendix~\ref{appendix:my_theorem_1}.
+
+\begin{theorem}[Approximate differential privacy of ExpSketch]
+\label{thm:my_thorem_22}
+Let $\varepsilon > 0$ and $\delta > 0$, and let us restrict the set of possible data streams to a subset such that for any two data streams $\mathfrak{M}$ and $\mathfrak{M}'$ from this subset that differ in one element, the following conditions are fulfilled:
+\begin{enumerate}
+  \item $\phi \in (0, e^{-\varepsilon}) \implies 1 + e^{\varepsilon}\left(e^{-\phi\frac{\ln(\phi) + \varepsilon}{\phi - 1}} - 1\right) - e^{-\frac{\ln(\phi) + \varepsilon}{\phi - 1}} \leq \delta$,
+  \item $\phi \in (1, \infty) \implies e^{\frac{\ln(\phi) + \varepsilon}{1-\phi}} - e^{\varepsilon + \phi \frac{\ln(\phi) + \varepsilon}{1-\phi}} \leq \delta$,
+\end{enumerate}
+where $\phi = \Lambda' / \Lambda$ is the ratio of the sums $\Lambda'$ and $\Lambda$ of the attributes of unique elements in $\mathfrak{M}'$ and $\mathfrak{M}$, respectively. Then the one-dimensional version of ExpSketch is $(\varepsilon, \delta)$-differentially private on this subset of streams.
+\end{theorem}
+
+The next theorem gives an example of such a restriction on data streams. Its proof can be found in Appendix~\ref{appendix:my_theorem_2}.
+
+\begin{theorem}[Approximate differential privacy of ExpSketch for bounded attributes]
+\label{thm:my_thorem_24}
+Consider the subset of data streams in which the sum of the attributes of unique elements of each stream is at least $\Lmin$ and the attribute of each element is at most $\lmax = \Lmin\left(e^{\varepsilon} - 1\right)$. On this subset, the one-dimensional version of ExpSketch is $(\varepsilon, \delta)$-differentially private for
+\[
+\delta = e^{\frac{2\varepsilon}{1 - e^{\varepsilon}}} - e^{\varepsilon\frac{1 + e^{\varepsilon}}{1 - e^{\varepsilon}}}.
+\]
+\end{theorem}
+
+\section{Differential privacy of the Fast Exponential Sketch}
+
+The article~\cite{Eficient_framework_for_operating_on_data_sketches} introduces an optimization of ExpSketch called FastExpSketch. The algorithm still produces a vector of values drawn from the distribution $\Exp(\Lambda)$. The optimization is based on the following theorem.
+
+\begin{theorem}[{\cite{Eficient_framework_for_operating_on_data_sketches}}]
+Let $E_1, \ldots, E_m$ be a sequence of i.i.d.\ exponential random variables and let
+\[
+E_{(1)} \leq E_{(2)} \leq \ldots \leq E_{(m)}
+\]
+denote their order statistics, i.e.\ $E_{(k)}$ denotes the $k$-th smallest value. Then for each $k \in \{1, 2, \ldots, m\}$ we have the distributional equality
+\[
+E_{(k)} \equiv E_{(k - 1)} + \frac{E_k}{m - k + 1},
+\]
+where $E_{(0)} = 0$.
+\end{theorem}
+
+Assume that we have generated variables $E_1, \ldots, E_m$ from the distribution $\Exp(\Lambda)$. After sorting them, we obtain $E_{(1)} \leq \ldots \leq E_{(d)} \leq \ldots \leq E_{(m)}$. If $E_{(d)} \geq \max\{\mathbf{M}_1, \ldots, \mathbf{M}_m\}$, then the variables $E_{(d)}, \ldots, E_{(m)}$ do not affect the vector $\mathbf{M}$. Thanks to the above theorem, FastExpSketch can directly generate the order statistics $E_{(1)}, \ldots, E_{(d)}$, stopping as soon as $E_{(d)} \geq \max\{\mathbf{M}_1, \ldots, \mathbf{M}_m\}$. The output of FastExpSketch is still a vector of values drawn from the distribution $\Exp(\Lambda)$. Therefore, implementing differential privacy in FastExpSketch in the same way as in ExpSketch also yields a differentially private algorithm. FastExpSketch and DP-FastExpSketch are presented in Algorithms~\ref{alg:expsketch} and~\ref{alg:df_expsketch2}, respectively.
+
+\begin{algorithm}[htbp]
+\caption{FastExpSketch($\mathfrak{M}, m$)}
+\label{alg:expsketch}
+\begin{algorithmic}[1]
+\State \textbf{Initialization:}
+\State $\mathit{permInit} \gets (1, 2, \ldots, m)$
+\State Set each of the $m$ positions of the data sketch $\mathbf{M} = (\mathbf{M}_1, \ldots, \mathbf{M}_m)$ to $\infty$
+\State $\mathit{MAX} \gets \infty$
+\State
+\State \textbf{Update the data sketch $\mathbf{M}$ with the elements of the data stream $\mathfrak{M}$:}
+\ForAll{$(i, \lambda_i) \in \mathfrak{M}$}
+    \State $S \gets 0$
+    \State $\mathit{updateMAX} \gets \mathbf{false}$
+    \State $P \gets \mathit{permInit}$
+    \For{$k \gets 1$ \textbf{to} $m$}
+        \State $U_{i,k} \gets \mathcal{H}(i \mathbin{\|} k)$ \Comment{hash $\mathcal{H}(x) \in [0, 1)$}
+        \State $E_{i,k} \gets -\frac{\ln(U_{i,k})}{\lambda_i}$
+        \State $S \gets S + \frac{E_{i,k}}{m - k + 1}$
+        \If{$S \geq \mathit{MAX}$}
+            \State \textbf{break}
+        \EndIf
+        \State $r \gets \mathrm{RandomInteger}([k, m], \mathit{seed} = i)$
+        \State swap($P[k], P[r]$)
+        \State $j \gets P[k]$
+        \If{$\mathbf{M}_j = \mathit{MAX}$}
+            \State $\mathit{updateMAX} \gets \mathbf{true}$
+        \EndIf
+        \State $\mathbf{M}_j \gets \min \{\mathbf{M}_j, S\}$
+    \EndFor
+    \If{$\mathit{updateMAX}$}
+        \State $\mathit{MAX} \gets \max\{\mathbf{M}_1, \ldots, \mathbf{M}_m\}$
+    \EndIf
+\EndFor
+\State
+\State \textbf{Estimate the sum of the attributes of unique elements in $\mathfrak{M}$:}
+\State \Return $\frac{m-1}{\sum_{k=1}^{m} \mathbf{M}_k}$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption{DP-FastExpSketch($\mathfrak{M}, m, \lmax, \varepsilon$)}
+\label{alg:df_expsketch2}
+\begin{algorithmic}[1]
+\State \textbf{Modify $\mathfrak{M}$ (a preliminary step ensuring differential privacy):}
+\State $\mathfrak{M}' \gets \left\{ \left(\text{unique identifier}, \frac{\lmax}{e^\varepsilon - 1}\right) \right\} \cup \left\{ \bigl(i, \min(\lambda_i, \lmax)\bigr) : (i,\lambda_i) \in \mathfrak{M} \right\}$
+\State
+\State \textbf{Build the data sketch from the modified data stream $\mathfrak{M}'$:}
+\State $\mathbf{M} \gets \mathrm{FastExpSketch}(\mathfrak{M}', m)$
+\State
+\State \textbf{After the following modification, the privacy conditions are satisfied:}
+\ForAll{$i \in \{1, 2, \ldots, m\}$}
+    \State $\mathbf{M}'_{i} \gets \min\left(\mathbf{M}_{i}, \thr\right)$
+\EndFor
+\State
+\State \textbf{Estimate the sum of the attributes of unique elements in $\mathfrak{M}$:}
+\State \Return $\frac{m-1}{\sum_{k=1}^{m} \mathbf{M}'_k} - \frac{\lmax}{e^\varepsilon - 1}$
+\end{algorithmic}
+\end{algorithm}

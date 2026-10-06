@@ -1,0 +1,220 @@
+\chapter{Attacks on data privacy}
+\label{chap:attacks}
+
+It might seem that recovering private data from analyses that aggregate the data of many individuals is impossible, or that the recovered data is too inaccurate to be of practical use to an adversary. Unfortunately, publishing such an analysis without proper data protection mechanisms (such as differential privacy) can lead to a leakage of personal data. Personal data can be vulnerable to various attacks, including reconstruction attacks and tracing attacks.
+
+\section{Reconstruction attacks}
+
+A reconstruction attack is an attempt to reconstruct individuals' private data stored in a database by means of specially crafted queries. These queries are answered by the mechanism responsible for analyzing the aggregated data. If this mechanism was built without appropriate privacy protection, it may allow an adversary to reconstruct the original database from the answers. Such attacks can lead to a violation of the privacy of the individuals concerned and to the misuse of their data.
+
+\subsection{A basic example of a reconstruction attack}
+
+The article~\cite{publicDataAttack} presents a reconstruction attack on data that resembles a simplified fragment of a census of a small group of individuals. It describes an intuitive method of conducting a reconstruction attack on the data from Table~\ref{tab:summary_stats}. Based on this table, a set of constraints is formulated, whose solution can be found, for example, using a SAT solver.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{A fragment of the sample table of aggregated data from~\cite{publicDataAttack}. (D) denotes values suppressed for confidentiality.}
+\label{tab:summary_stats}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Statistic} & \textbf{Group} & \textbf{Count} & \textbf{Median age} & \textbf{Mean age} \\
+\midrule
+1A & Total population & 7 & 30 & 38 \\
+\midrule
+\multirow{2}{*}{2A} & Female & 4 & 30 & 33.5 \\
+   & Male & 3 & 30 & 44 \\
+\midrule
+\multirow{2}{*}{2B} & Black or African American & 4 & 51 & 48.5 \\
+   & White & 3 & 24 & 24 \\
+\midrule
+\multirow{2}{*}{3A} & Single adults & \multicolumn{3}{c}{(D)} \\
+   & Married adults & 4 & 51 & 54 \\
+\midrule
+\multirow{4}{*}{4A} & Black or African American female & 3 & 36 & 36.7 \\
+   & Black or African American male & \multicolumn{3}{c}{(D)} \\
+   & White male & \multicolumn{3}{c}{(D)} \\
+   & White female & \multicolumn{3}{c}{(D)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Reconstruction attack on the 2010 US Census data}
+
+Reconstruction attacks can also be applied to analyses of aggregated data concerning much larger groups of individuals, even if these analyses use some basic privacy protection mechanisms. An example is the US Census, whose results were published until 2010 with some noise added to protect privacy. The articles~\cite{Census_Bureau_Reconstruction_2010} and~\cite{Census_Bureau_Reconstruction_2010_2} discuss a possible scenario of a reconstruction attack on the 2010 US Census, which contains the personal data of millions of Americans. In the 2020 US Census, differential privacy was already used to protect personal data.
+
+\subsection{Reconstruction attack on the Diffix system}
+
+As a result of legal regulations such as the GDPR, there is a demand for privacy-focused software. Unfortunately, some of these programs use a heuristic approach to privacy, which may threaten the privacy of the individuals whose data they process. The article~\cite{LINEAR_PROGRAM_RECONSTRUCTION_IN_PRACTICE} describes an interesting reconstruction attack on the Diffix system. Diffix allows analysts to query a dataset using a subset of SQL. Upon receiving a query, Diffix analyzes it and returns an answer with added noise. The amount of noise depends on the size of the data subset used in the query and on the complexity of the query: each additional condition in the query increases the noise in the answer. The primary goal of the Diffix project was to develop a system that would:
+\begin{itemize}
+  \item allow analysts to ask any number of statistical queries;
+  \item achieve a very high accuracy of the answers;
+  \item protect the privacy of individuals' data.
+\end{itemize}
+Unfortunately, as follows from the theorems presented in~\cite{Revealing_Information_while_Preserving_Privacy}, \cite{The_Price_of_Privacy_and_the_Limits_of_LP_Decoding} and~\cite{New_Efficient_Attacks_on_Statistical_Disclosure_Control_Mechanisms}, which are described in the next section, such a system cannot exist.
+
+\section{Theoretical foundations of reconstruction attacks}
+
+The article~\cite{Revealing_Information_while_Preserving_Privacy} examines a reconstruction attack on a very basic database. The database is a sequence of $n$ bits $d_1, d_2, \ldots, d_n$, where $d_i \in \{0, 1\}$ is the value of a private attribute of the user $u_i$. The mechanism $M$ answers queries $q \subseteq [n]$, where $[n] = \{1, \ldots, n\}$, with $M(q) = \sum_{i \in q} d_i + \mathcal{E}$, where $\mathcal{E}$ is the noise added to the answer. The main result of this work is a theorem that can be stated in a simplified form as follows.
+
+\begin{theorem}[{\cite{Revealing_Information_while_Preserving_Privacy}}]
+If the magnitude of the noise is $\mathcal{E} = o(\sqrt{n})$, then there exists a polynomial-time algorithm that reconstructs the database correctly on all but $o(n)$ entries.
+\end{theorem}
+
+The attack is presented in Algorithm~\ref{alg:reconstruction}.
+
+\begin{algorithm}[htbp]
+\caption{Reconstruction attack against noise $\mathcal{E} = o(\sqrt{n})$}
+\label{alg:reconstruction}
+\begin{algorithmic}[1]
+\State \textbf{Query phase:}
+\State Let $t = n(\log n)^2$.
+\ForAll{$j \in \{1, 2, \ldots, t\}$}
+    \State Choose uniformly at random $q_j \subseteq [n]$
+    \State $\tilde{a}_{q_j} \gets M(q_j)$
+\EndFor
+\State
+\State \textbf{Weeding phase:}
+\State Solve the following linear program with unknowns $c_1, \ldots, c_n$:
+\Statex \hspace{\algorithmicindent}$\tilde{a}_{q_j} - \mathcal{E} \leq \sum_{i \in q_j} c_i \leq \tilde{a}_{q_j} + \mathcal{E}$ \quad for $1 \leq j \leq t$,
+\Statex \hspace{\algorithmicindent}$0 \leq c_i \leq 1$ \quad for $1 \leq i \leq n$.
+\State
+\State \textbf{Rounding phase:}
+\State Let $c'_i = 1$ if $c_i > 1/2$ and $c'_i = 0$ otherwise. Output $c'$.
+\end{algorithmic}
+\end{algorithm}
+
+The above attack can be generalized to more complex databases. It is important to note that noise of magnitude $\mathcal{E} = \omega(\sqrt{n})$, for which the adversary cannot execute this attack successfully, does not by itself guarantee privacy: one can construct mechanisms in which the magnitude of the noise is $\mathcal{E} = \omega(\sqrt{n})$ and privacy is still compromised. The main conclusion of this study is that no mechanism can ensure privacy if it answers too many queries with too little noise. The articles~\cite{The_Price_of_Privacy_and_the_Limits_of_LP_Decoding} and~\cite{New_Efficient_Attacks_on_Statistical_Disclosure_Control_Mechanisms} extend these results on reconstruction attacks.
+
+\section{A privacy attack on ExpSketch}
+
+Let us consider a scenario with $n+1$ users. Each user $U_i$ has made a transaction of value $T_i$ for a product belonging to some subset of the set of categories $C = \{C_1, C_2, \ldots, C_p\}$ (Tables~\ref{tab:przypisanie-kategorii} and~\ref{tab:przypisanie-cen}).
+
+\begin{table}[htbp]
+\centering
+\caption{Example of assigning user transactions to categories.}
+\label{tab:przypisanie-kategorii}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+ & $U_1$ & $U_2$ & $\cdots$ & $U_{n+1}$ \\
+\midrule
+$C_1$ & \checkmark & & $\cdots$ & \checkmark \\
+$C_2$ & & \checkmark & $\cdots$ & \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\ddots$ & $\vdots$ \\
+$C_p$ & & & $\cdots$ & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Example of assigning values to transactions.}
+\label{tab:przypisanie-cen}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+ & $U_1$ & $U_2$ & $\cdots$ & $U_{n+1}$ \\
+\midrule
+$T$ & \$100 & \$50 & $\cdots$ & \$10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+There are also $p$ services, and each service $S_i$ maintains its own data sketch, which processes all transactions belonging to the category $C_i$. Each service $S_i$ can thus provide a data sketch describing the sum of all unique transactions belonging to the category $C_i$. By combining data sketches, it is possible to answer the question of what the sum of unique transactions belonging to any of several categories, for example $C_1$, $C_2$ and $C_{15}$, is.
+
+The administrator of these services would like to allow interested analysts to obtain answers to the question ``what is the sum of unique transactions belonging to the given categories?'', but in such a way that the categories of individual transactions remain confidential.
+
+In this scenario, let us assume that the adversary knows the content of Table~\ref{tab:przypisanie-cen} for all users and the content of Table~\ref{tab:przypisanie-kategorii} for all users except $U_{n+1}$. The adversary's goal is to determine the categories of the transaction of the user $U_{n+1}$. To this end, the adversary uses their knowledge of the other users' transactions and sends queries to the administrator.
+
+To each query $Q_k \subseteq C$, the administrator responds with
+\[
+A_k = \sum_{i=1}^{n+1} T_i \cdot g(T_i, Q_k),
+\]
+where $g(T_i, Q_k)$ equals $1$ if the transaction $T_i$ has a category that belongs to $Q_k$, and $0$ otherwise. Thanks to their knowledge, the adversary can compute the answers to their queries for all users except $U_{n+1}$ on their own. This means that the adversary knows the values
+\[
+A'_k = \sum_{i=1}^{n} T_i \cdot g(T_i, Q_k)
+\]
+and can use them, together with the answers to their queries, to calculate $g(T_{n+1}, Q_k)$ for any query $Q_k$:
+\[
+g(T_{n+1}, Q_k) = \frac{A_k - A'_k}{T_{n+1}}.
+\]
+The adversary can use mixed-integer programming to formulate an optimization problem whose solution is a guess of the categories of the transaction $T_{n+1}$. The reconstruction algorithm assigns categories to the transaction $T_{n+1}$ in such a way that the answers computed by the adversary, based on their knowledge of the other transactions and on the categories assigned to $T_{n+1}$, are as close as possible to the answers obtained from the administrator.
+
+To protect the privacy of transaction data, the administrator should avoid giving exact answers. Instead, the answers should contain noise that reduces the effectiveness of the adversary's reconstruction algorithm. To assess the effectiveness of the reconstruction attack, we use the F1-score, which measures how well the adversary has reconstructed the set of categories of the given transaction. The F1-score is the harmonic mean of precision and recall.
+
+According to Theorems~\ref{thm:my_thorem_22} and~\ref{thm:my_thorem_24}, if the value of a single transaction does not significantly affect the sum of all unique transactions in a given data sketch, approximate differential privacy is maintained and the reconstruction attack should be less effective. Below we present simulation results for two cases, depending on whether the transaction $T_{n+1}$ has a significant impact on the data sketch.
+
+\subsection{Simulation of the attack when the transaction significantly affects the data sketch}
+
+In this simulation, data streams consisting of $10\,000$ transactions were used. Each transaction could belong to any of the $20$ available categories. The value of the transaction $T_{n+1}$ accounted for over $10\%$ of the total value of all transactions. For the differentially private algorithms, $\varepsilon = 1$ and $\delta = 10^{-4}$. The adversary could ask $100$ random queries. The plots in Figure~\ref{fig:rec_attacks_1} show that in such extreme circumstances, when a single element has a significant impact on the data sketch, privacy may not be protected: the reconstruction attack, whether based on exact answers or on answers computed from the data sketch, has a high probability of success. The plots also show that both pure and approximate differential privacy protect against the reconstruction attack.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{accurate_100_request_specific}
+    \caption{Exact answers.}
+    \label{fig:zdjecie1}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{sketch_100_request_specific}
+    \caption{FastExpSketch answers.}
+    \label{fig:zdjecie2}
+  \end{subfigure}
+
+  \medskip
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{approx_100_specific}
+    \caption{$(\varepsilon, \delta)$-DP FastExpSketch answers.}
+    \label{fig:zdjecie3}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{DF_100_request_specific}
+    \caption{$\varepsilon$-DP FastExpSketch answers.}
+    \label{fig:zdjecie4}
+  \end{subfigure}
+  \caption{Accuracy (F1-score) of the reconstruction attack on a \emph{large} transaction, depending on the mechanism used to answer the queries.}
+  \label{fig:rec_attacks_1}
+\end{figure}
+
+\subsection{Simulation of the attack when the transaction does not significantly affect the data sketch}
+
+In this simulation, the value of the transaction $T_{n+1}$ is reduced to the value of a regular transaction, so that its impact on the data sketch is the same as that of the other transactions. The plots in Figure~\ref{fig:rec_attacks_2} show that, based on exact answers, it is still possible to reconstruct the categories of the transaction $T_{n+1}$. However, the standard version of FastExpSketch already introduces enough noise to prevent the attack defined above.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{accurate_100_normal_case}
+    \caption{Exact answers.}
+    \label{fig:zdjecie11}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{sketch_100_normal_case}
+    \caption{FastExpSketch answers.}
+    \label{fig:zdjecie22}
+  \end{subfigure}
+
+  \medskip
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{approx_100_normal_case}
+    \caption{$(\varepsilon, \delta)$-DP FastExpSketch answers.}
+    \label{fig:zdjecie33}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{pure_DF_100_normal_case}
+    \caption{$\varepsilon$-DP FastExpSketch answers.}
+    \label{fig:zdjecie44}
+  \end{subfigure}
+  \caption{Accuracy (F1-score) of the reconstruction attack on a \emph{regular} transaction, depending on the mechanism used to answer the queries.}
+  \label{fig:rec_attacks_2}
+\end{figure}

@@ -1,0 +1,27 @@
+# Build output
+build/
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.loa
+*.lol
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+_minted*/
+svg-inkscape/
+
+
+# Editors / OS
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Python
+__pycache__/

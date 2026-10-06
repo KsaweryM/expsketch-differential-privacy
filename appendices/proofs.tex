@@ -1,0 +1,264 @@
+\chapter{Proof of Theorem~\ref{thm:my_thorem_22}}
+\label{appendix:my_theorem_1}
+
+Let us assume that $S$ is a subset of $(0, \infty)$, and that $\Lambda$ and $\Lambda'$ are the sums of the attributes of unique elements in two data streams $\mathfrak{M}$ and $\mathfrak{M}'$, respectively. To show that ExpSketch without any modifications satisfies approximate differential privacy, we need to find a value of $\delta$ (preferably the smallest possible) for which the following condition is satisfied:
+\begin{equation}
+\Pr[\mathcal{M}(\mathfrak{M}) \in S] \leq e^{\varepsilon} \Pr[\mathcal{M}(\mathfrak{M}') \in S] + \delta.
+\label{eq:app_df_2}
+\end{equation}
+Condition~\eqref{eq:app_df_2} can be written as
+\begin{equation}
+\int_{S} \Lambda e^{-x\Lambda} \dd x \leq e^{\varepsilon} \int_{S} \Lambda' e^{-x\Lambda'} \dd x + \delta.
+\label{eq:app_df_3}
+\end{equation}
+Let us assume that $\Lambda \neq \Lambda'$, because if $\Lambda = \Lambda'$, condition~\eqref{eq:app_df_2} is trivially fulfilled. This assumption will be needed in the subsequent computations. Let us define
+\[
+\phi = \frac{\Lambda'}{\Lambda}.
+\]
+Then $\phi \in (0, 1) \cup (1, \infty)$. Since $\Lambda' = \Lambda\phi$, inequality~\eqref{eq:app_df_3} can be written as
+\[
+\int_{S} \Lambda e^{-x\Lambda} \dd x \leq e^{\varepsilon} \int_{S} \Lambda\phi e^{-x\Lambda\phi} \dd x + \delta,
+\]
+which is equivalent to
+\begin{equation}
+\int_{S} \left(\Lambda e^{-x\Lambda} - e^{\varepsilon}\Lambda\phi e^{-x\Lambda\phi} \right) \dd x \leq \delta.
+\label{eq:app_df_3345}
+\end{equation}
+Let us define the function $f : (0, \infty) \rightarrow \R$:
+\[
+f(x) = \Lambda e^{-x\Lambda} - e^{\varepsilon}\Lambda\phi e^{-x\Lambda\phi}.
+\]
+Using $f$, inequality~\eqref{eq:app_df_3345} can be written as
+\begin{equation}
+\int_S f(x) \dd x \leq \delta.
+\label{eq:app_df_4}
+\end{equation}
+In order to find the optimal $\delta$ for which inequality~\eqref{eq:app_df_4} is satisfied, we analyze the properties of the function $f$.
+\begin{enumerate}[label=\arabic*.]
+\item The derivative of the function:
+\[
+\frac{\mathrm{d}f(x)}{\mathrm{d}x} = e^{\varepsilon}\Lambda^2\phi^2 e^{-\Lambda\phi x} - \Lambda^{2} e^{-\Lambda x}.
+\]
+
+\item The zero $x_e$ of the derivative:
+\begin{align*}
+\frac{\mathrm{d}f(x_e)}{\mathrm{d}x} &= 0, \\
+e^{\varepsilon}\Lambda^2\phi^2 e^{-\Lambda\phi x_e} &= \Lambda^{2} e^{-\Lambda x_e}, \\
+e^{\varepsilon}\phi^2 &= e^{-\Lambda x_e (1-\phi)}, \\
+e^{2\ln(\phi) + \varepsilon} &= e^{-\Lambda x_e (1-\phi)}.
+\end{align*}
+Since the exponential function is injective,
+\begin{align*}
+2\ln(\phi) + \varepsilon &= \Lambda x_e (\phi-1), \\
+x_e &= \frac{2\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}.
+\end{align*}
+
+\item The sign of $x_e$ depends on the value of $\phi$. Let us consider two cases, depending on whether $\phi$ is greater than $1$.
+\begin{enumerate}[label=(\alph*)]
+  \item If $\phi > 1$, then $x_e$ is positive.
+  \item If $\phi < 1$, i.e.\ $\phi \in (0, 1)$, let us check for which values of $\phi$ the zero of the derivative is positive:
+  \begin{equation}
+  x_e = \frac{2\ln(\phi) + \varepsilon}{\Lambda(\phi-1)} \geq 0.
+  \label{eq:sign_of_eks}
+  \end{equation}
+  Since the denominator is negative, multiplying inequality~\eqref{eq:sign_of_eks} by $\Lambda(\phi-1)$ reverses the inequality sign:
+  \begin{align*}
+  2\ln(\phi) + \varepsilon &\leq 0, \\
+  \ln(\phi) &\leq -\frac{\varepsilon}{2}.
+  \end{align*}
+  Since the exponential function is increasing,
+  \[
+  \phi \leq e^{-\frac{\varepsilon}{2}}.
+  \]
+\end{enumerate}
+To sum up:
+\begin{align*}
+\phi \in \bigl(0, e^{-\frac{\varepsilon}{2}}\bigr) \cup (1, \infty) &\implies x_e \geq 0, \\
+\phi \in \bigl(e^{-\frac{\varepsilon}{2}}, 1\bigr) &\implies x_e \leq 0.
+\end{align*}
+
+\item The second derivative of the function:
+\[
+\frac{\mathrm{d}^2 f(x)}{\mathrm{d}x^2} = \Lambda^3 e^{-\Lambda x} - e^{\varepsilon}\Lambda^3\phi^3 e^{-\Lambda\phi x}.
+\]
+
+\item The sign of the second derivative at $x_e$:
+\begin{align*}
+\frac{\mathrm{d}^2 f(x_e)}{\mathrm{d}x^2} &\geq 0, \\
+\Lambda^3 e^{-\Lambda \frac{2\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}} - e^{\varepsilon}\Lambda^3\phi^3 e^{-\Lambda\phi \frac{2\ln(\phi)+\varepsilon}{\Lambda(\phi-1)}} &\geq 0, \\
+e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi}} &\geq e^{\varepsilon}\phi^3 e^{\phi \frac{2\ln(\phi)+\varepsilon}{1-\phi}}, \\
+\frac{e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi}}}{e^{\phi \frac{2\ln(\phi)+\varepsilon}{1-\phi}}} &\geq e^{\varepsilon}\phi^3, \\
+e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi} - \phi \frac{2\ln(\phi)+\varepsilon}{1-\phi}} &\geq e^{\varepsilon}\phi^3, \\
+e^{\frac{(2\ln(\phi)+\varepsilon)(1-\phi)}{1-\phi}} &\geq e^{\varepsilon} e^{3\ln(\phi)}, \\
+e^{2\ln(\phi)+\varepsilon} &\geq e^{\varepsilon} e^{3\ln(\phi)}, \\
+\phi^2 &\geq \phi^3, \\
+\phi &\leq 1.
+\end{align*}
+To sum up:
+\begin{align*}
+\phi \in (0, 1) &\implies x_e \text{ is a minimum}, \\
+\phi \in (1, \infty) &\implies x_e \text{ is a maximum}.
+\end{align*}
+
+\item The sign of the extremum:
+\begin{align*}
+f(x_e) = \Lambda e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi}} - e^{\varepsilon} \Lambda\phi e^{\phi\frac{2\ln(\phi)+\varepsilon}{1-\phi}} &\geq 0, \\
+\Lambda e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi}} &\geq e^{\varepsilon} \Lambda\phi e^{\phi\frac{2\ln(\phi)+\varepsilon}{1-\phi}}, \\
+\frac{e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi}}}{e^{\varepsilon} \phi e^{\phi\frac{2\ln(\phi)+\varepsilon}{1-\phi}}} &\geq 1, \\
+\frac{e^{\frac{2\ln(\phi)+\varepsilon}{1-\phi} - \phi\frac{2\ln(\phi)+\varepsilon}{1-\phi}}}{e^{\varepsilon} \phi} &\geq 1, \\
+\frac{e^{\frac{(2\ln(\phi)+\varepsilon)(1-\phi)}{1-\phi}}}{e^{\varepsilon} \phi} &\geq 1, \\
+\frac{e^{2\ln(\phi)+\varepsilon}}{e^{\varepsilon} \phi} &\geq 1, \\
+\frac{\phi^2 e^{\varepsilon}}{e^{\varepsilon} \phi} &\geq 1, \\
+\phi &\geq 1.
+\end{align*}
+To sum up:
+\begin{align*}
+\phi \in (0, 1) &\implies f(x_e) \leq 0, \\
+\phi \in (1, \infty) &\implies f(x_e) \geq 0.
+\end{align*}
+
+\item The values of the function at the endpoints of the domain:
+\begin{enumerate}[label=(\alph*)]
+  \item Left endpoint:
+  \[
+  f(0) = \Lambda(1 - e^{\varepsilon}\phi).
+  \]
+  The sign of $f(0)$ depends on the value of $\phi$:
+  \begin{align*}
+  f(0) = \Lambda(1 - e^{\varepsilon}\phi) &\geq 0, \\
+  1 - e^{\varepsilon}\phi &\geq 0, \\
+  \phi &\leq e^{-\varepsilon}.
+  \end{align*}
+  To sum up:
+  \begin{align*}
+  \phi \in (e^{-\varepsilon}, 1) \cup (1, \infty) &\implies f(0) \leq 0, \\
+  \phi \in (0, e^{-\varepsilon}) &\implies f(0) \geq 0.
+  \end{align*}
+  \item Right endpoint:
+  \[
+  \lim_{x \to \infty} f(x) = 0.
+  \]
+\end{enumerate}
+
+\item The zero $x_0$ of the function $f$:
+\begin{align*}
+f(x_0) = \Lambda e^{-x_0\Lambda} - e^{\varepsilon}\Lambda\phi e^{-x_0\Lambda\phi} &= 0, \\
+\frac{e^{-x_0\Lambda}}{e^{-x_0\Lambda\phi}} &= e^{\ln(\phi) + \varepsilon}, \\
+e^{-x_0\Lambda(1-\phi)} &= e^{\ln(\phi) + \varepsilon}, \\
+e^{x_0\Lambda(\phi-1)} &= e^{\ln(\phi) + \varepsilon}.
+\end{align*}
+Since the exponential function is injective,
+\begin{align*}
+x_0\Lambda(\phi-1) &= \ln(\phi) + \varepsilon, \\
+x_0 &= \frac{\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}.
+\end{align*}
+
+\item The sign of the zero of $f$ depends on the value of $\phi$. Let us consider two cases, depending on whether $\phi$ is greater than $1$.
+\begin{enumerate}[label=(\alph*)]
+  \item If $\phi > 1$, then the zero of $f$ is positive.
+  \item If $\phi < 1$, i.e.\ $\phi \in (0, 1)$, then
+  \begin{equation}
+  \frac{\ln(\phi) + \varepsilon}{\Lambda(\phi-1)} \geq 0.
+  \label{eq:sign_of_eks_2}
+  \end{equation}
+  Since the denominator is negative, multiplying inequality~\eqref{eq:sign_of_eks_2} by $\Lambda(\phi-1)$ reverses the inequality sign:
+  \begin{align*}
+  \ln(\phi) + \varepsilon &\leq 0, \\
+  \phi &\leq e^{-\varepsilon}.
+  \end{align*}
+\end{enumerate}
+To sum up:
+\begin{align*}
+\phi \in (e^{-\varepsilon}, 1) &\implies x_0 \leq 0, \\
+\phi \in (0, e^{-\varepsilon}) \cup (1, \infty) &\implies x_0 \geq 0.
+\end{align*}
+\end{enumerate}
+
+All the above properties of the function $f$ are summarized in Table~\ref{tab:properities_of_f}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Properties of the function $f$ depending on the value of $\phi$.}
+  \label{tab:properities_of_f}
+  \begin{tabular}{@{}lcccccc@{}}
+    \toprule
+    & $x_0$ & $x_e$ & $f(x_e)$ & type of extremum & $f(0)$ & $\lim_{x \to \infty} f(x)$ \\
+    \midrule
+    $\phi \in (0, e^{-\varepsilon})$ & $+$ & $+$ & $-$ & minimum & $+$ & $0$ \\
+    $\phi \in [e^{-\varepsilon}, e^{-\frac{\varepsilon}{2}})$ & $-$ & $+$ & $-$ & minimum & $-$ & $0$ \\
+    $\phi \in [e^{-\frac{\varepsilon}{2}}, 1)$ & $-$ & $-$ & $-$ & minimum & $-$ & $0$ \\
+    $\phi \in (1, \infty)$ & $+$ & $+$ & $+$ & maximum & $-$ & $0$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+From this table, it follows that:
+\begin{align*}
+\phi \in (0, e^{-\varepsilon}) &\implies \forall S \subseteq (0, \infty) : \int_{S} f(x) \dd x \leq \int_{0}^{x_0} f(x) \dd x, \\
+\phi \in \bigl[e^{-\varepsilon}, e^{-\frac{\varepsilon}{2}}\bigr) &\implies \forall S \subseteq (0, \infty) : \int_{S} f(x) \dd x \leq 0, \\
+\phi \in \bigl[e^{-\frac{\varepsilon}{2}}, 1\bigr) &\implies \forall S \subseteq (0, \infty) : \int_{S} f(x) \dd x \leq 0, \\
+\phi \in (1, \infty) &\implies \forall S \subseteq (0, \infty) : \int_{S} f(x) \dd x \leq \int_{x_0}^{\infty} f(x) \dd x.
+\end{align*}
+Hence, it suffices to find a value of $\delta$ that bounds both the integral $\int_{0}^{x_0} f(x) \dd x$ for $\phi \in (0, e^{-\varepsilon})$ and the integral $\int_{x_0}^{\infty} f(x) \dd x$ for $\phi \in (1, \infty)$.
+\begin{enumerate}[label=\arabic*.]
+\item Let us consider the first case, $\phi \in (0, e^{-\varepsilon})$:
+\begin{align*}
+\int_{S} f(x) \dd x \leq \int_{0}^{x_0} f(x) \dd x
+  &= \int_{0}^{\frac{\ln(\phi) + \varepsilon}{\Lambda(\phi -1)}} \left( \Lambda e^{-x\Lambda} - e^{\varepsilon}\Lambda\phi e^{-x\Lambda\phi} \right) \dd x \\
+  &= \Bigl[-e^{-\Lambda x} + e^{\varepsilon -\Lambda \phi x}\Bigr]_{0}^{\frac{\ln(\phi)+\varepsilon}{\Lambda(\phi -1)}} \\
+  &= 1 + e^{\varepsilon}\left(e^{-\phi\frac{\ln(\phi) + \varepsilon}{\phi - 1}} - 1\right) - e^{-\frac{\ln(\phi) + \varepsilon}{\phi - 1}}.
+\end{align*}
+
+\item Let us now consider the second case, $\phi \in (1, \infty)$:
+\begin{align*}
+\int_{S} f(x) \dd x \leq \int_{x_0}^{\infty} f(x) \dd x
+  &= \int_{\frac{\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}}^{\infty} \left( \Lambda e^{-x\Lambda} - e^{\varepsilon}\Lambda\phi e^{-x\Lambda\phi} \right) \dd x \\
+  &= \lim_{b \to \infty} \Bigl[-e^{-\Lambda x} + e^{\varepsilon -\Lambda \phi x}\Bigr]_{\frac{\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}}^{b} \\
+  &= e^{-\Lambda \frac{\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}} - e^{\varepsilon -\Lambda \phi \frac{\ln(\phi) + \varepsilon}{\Lambda(\phi-1)}} \\
+  &= e^{\frac{\ln(\phi) + \varepsilon}{1-\phi}} - e^{\varepsilon + \phi \frac{\ln(\phi) + \varepsilon}{1-\phi}}.
+\end{align*}
+\end{enumerate}
+These are exactly the bounds in the conditions of Theorem~\ref{thm:my_thorem_22}, which completes the proof. \qed
+
+
+\chapter{Proof of Theorem~\ref{thm:my_thorem_24}}
+\label{appendix:my_theorem_2}
+
+Let us assume that the set of possible data streams has been restricted to a subset in which the sum of the attributes of unique elements of each data stream is at least $\Lmin$ and each element of the data streams has an attribute not greater than $\lmax = \Lmin(e^{\varepsilon} - 1)$.
+
+First, let us prove that $\phi$ does not belong to the interval $(0, e^{-\varepsilon})$. Let us take two streams $\mathfrak{M}$ and $\mathfrak{M}'$ that differ in only one element, with sums of the attributes of unique elements equal to $\Lambda$ and $\Lambda'$, respectively, where $\Lambda, \Lambda' \geq \Lmin$ and each element of these data streams is not greater than $\lmax = \Lmin(e^{\varepsilon} - 1)$. Let us consider two cases, depending on whether $\Lambda$ is greater than $\Lambda'$.
+\begin{enumerate}[label=\arabic*.]
+  \item If $\Lambda' > \Lambda$, then $\phi = \frac{\Lambda'}{\Lambda} > 1$, so $\phi \notin (0, e^{-\varepsilon})$.
+  \item If $\Lambda' < \Lambda$, let us assume that the streams differ in the $i$-th element, and denote the $i$-th element of the first stream by $\lambda_{i}$ and the $i$-th element of the second stream by $\lambda'_{i}$. Since $\Lambda > \Lambda'$, we have $\lambda_{i} > \lambda'_{i}$. Let $\Delta\lambda_{i} = \lambda_{i} - \lambda'_{i}$. It follows from the assumptions that
+  \[
+  \Lmin(e^{\varepsilon} - 1) = \lmax \geq \Delta\lambda_{i},
+  \]
+  which is equivalent to
+  \begin{align*}
+  \frac{\Lmin\left(1 - e^{-\varepsilon}\right)}{e^{-\varepsilon}} &\geq \Delta\lambda_{i}, \\
+  \Lmin\left(1 - e^{-\varepsilon}\right) &\geq e^{-\varepsilon} \Delta\lambda_{i}, \\
+  \Lmin &\geq e^{-\varepsilon} \Delta\lambda_{i} + e^{-\varepsilon}\Lmin, \\
+  \Lmin &\geq e^{-\varepsilon}\left(\Lmin + \Delta\lambda_{i}\right), \\
+  \frac{\Lmin}{\Lmin + \Delta\lambda_{i}} &\geq e^{-\varepsilon}.
+  \end{align*}
+  Since $\Lambda' \geq \Lmin$ and the function $t \mapsto \frac{t}{t + \Delta\lambda_i}$ is increasing,
+  \[
+  \phi = \frac{\Lambda'}{\Lambda} = \frac{\Lambda'}{\Lambda' + \Delta\lambda_{i}} \geq \frac{\Lmin}{\Lmin + \Delta\lambda_{i}} \geq e^{-\varepsilon}.
+  \]
+  Hence $\phi \notin (0, e^{-\varepsilon})$, so the first condition of Theorem~\ref{thm:my_thorem_22} is satisfied.
+\end{enumerate}
+
+Now we can determine the largest possible value of $\delta$ in the case $\phi \in (1, \infty)$ for such a restricted set of data streams. For $\phi > 1$, the function
+\[
+g(\phi) = e^{\frac{\ln(\phi) + \varepsilon}{1-\phi}} - e^{\varepsilon + \phi \frac{\ln(\phi) + \varepsilon}{1-\phi}}
+\]
+is increasing. Therefore, an upper bound on this function over the restricted subset of data streams is $g(\phi_{\max})$, where $\phi_{\max}$ is the largest value of $\phi$ that can be obtained in this subset. It can be easily shown that the largest possible value of $\phi$ is attained when $\Lambda = \Lmin$ and $\Lambda' = \Lambda + \lmax$. In that case,
+\[
+\phi_{\max} = \frac{\Lambda'}{\Lambda} = \frac{\Lambda + \lmax}{\Lambda} = \frac{\Lmin + \Lmin\left(e^{\varepsilon} - 1\right)}{\Lmin} = e^{\varepsilon}.
+\]
+Hence, in this case we can take
+\[
+\delta = g(\phi_{\max}) = g(e^{\varepsilon})
+  = e^{\frac{\ln(e^{\varepsilon}) + \varepsilon}{1 - e^{\varepsilon}}} - e^{\varepsilon + e^{\varepsilon} \frac{\ln(e^{\varepsilon}) + \varepsilon}{1 - e^{\varepsilon}}}
+  = e^{\frac{2\varepsilon}{1 - e^{\varepsilon}}} - e^{\varepsilon\frac{1 + e^{\varepsilon}}{1 - e^{\varepsilon}}}. \qed
+\]

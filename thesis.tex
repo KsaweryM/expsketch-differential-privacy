@@ -1,0 +1,129 @@
+% !TEX encoding = UTF-8 Unicode
+% !TEX program = pdflatex
+%
+% Master's thesis -- Differential privacy techniques in data sketches.
+% Build with `make` (see README.md).
+%
+% Class options (dyplom.cls):
+%   magister / inzynier  - master's or engineering thesis
+%   druk / archiwum      - print version (one-sided, wide binding margin)
+%                          or archive version (two-sided)
+%   en                   - English version of the template
+\documentclass[magister,druk,en]{dyplom}
+
+% ---------------------------------------------------------------------------
+% Packages (many others are already loaded by dyplom.cls)
+% ---------------------------------------------------------------------------
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{mathtools}
+% Times-like math matching the TeX Gyre Termes text font loaded by dyplom.cls.
+\let\Bbbk\relax % already defined by amssymb
+\usepackage[varg]{newtxmath}
+
+\graphicspath{{figures/diagrams/}{figures/plots/}}
+
+% Maximum section depth that gets a number.
+\setcounter{secnumdepth}{4}
+
+% Allow slightly looser lines instead of text sticking into the margin.
+\setlength{\emergencystretch}{1.5em}
+
+% Settings for code listings (minted is loaded by dyplom.cls).
+\setminted{
+  breaklines,
+  frame=lines,
+  framesep=3mm,
+  baselinestretch=1.1,
+  fontsize=\small,
+}
+
+% Captions: bold label, and subfigure captions as (a), (b), ...
+\captionsetup{labelfont=bf, font=small}
+\captionsetup[sub]{labelformat=parens, labelfont=normalfont}
+
+% Lists: slightly tighter than default.
+\setlist{itemsep=2pt, topsep=4pt}
+
+% ---------------------------------------------------------------------------
+% Theorem-like environments
+% ---------------------------------------------------------------------------
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+% ---------------------------------------------------------------------------
+% Notation
+% ---------------------------------------------------------------------------
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\lmax}{\lambda_{\mathrm{MAX}}}   % attribute cap in DP-ExpSketch
+\newcommand{\Lmin}{\Lambda_{\min}}           % lower bound on stream weight
+\newcommand{\thr}{\frac{\varepsilon}{\lmax}} % clipping threshold of sketch fields
+\newcommand{\dd}{\,\mathrm{d}}               % differential in integrals
+\DeclareMathOperator{\Lap}{Lap}
+\DeclareMathOperator{\Exp}{Exp}
+\DeclareMathOperator{\Range}{Range}
+\DeclareMathOperator{\merge}{merge}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+
+% Helpers
+\newcommand{\JL}[1]{\textcolor{red}{[JL: #1]}}       % supervisor's remarks
+
+% ---------------------------------------------------------------------------
+% Title page data
+% ---------------------------------------------------------------------------
+% \faculty{Faculty of \dots}                   % uncomment if applicable
+\fieldofstudy{Algorithmic Computer Science, Cryptography and Computer Security}
+\author{Ksawery Możdżyński}
+\title{Differential privacy techniques in data sketches}
+\supervisor{dr inż. Jakub Lemiesz}
+% \consultant{Consultant's name}               % uncomment if applicable
+% \specialisation{AAA}                         % uncomment if applicable
+\keywords{data sketch, differential privacy}   % 3--5 keywords
+\thesisyear{2024}                                % year on the title page
+
+\hypersetup{
+  pdftitle={Differential privacy techniques in data sketches},
+  pdfauthor={Ksawery Możdżyński},
+  pdfkeywords={data sketch, differential privacy},
+}
+
+\begin{document}
+
+\maketitle
+
+\input{frontmatter/abstract}
+
+\tableofcontents
+
+\input{chapters/00-introduction}
+\input{chapters/01-differential-privacy}
+\input{chapters/02-data-sketches}
+\input{chapters/03-literature-review}
+\input{chapters/04-expsketch-privacy}
+\input{chapters/05-privacy-attacks}
+\input{chapters/06-experiments}
+\input{chapters/07-summary}
+
+% Bibliography
+\bibliographystyle{dyplom-en}
+\bibliography{bibliography}
+
+% Lists of figures, algorithms and tables
+\listoffigures
+\listofalgorithms
+\listoftables
+
+% Appendices
+\appendixpage
+\appendix
+\input{appendices/proofs}
+
+\end{document}

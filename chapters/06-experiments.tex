@@ -1,0 +1,28 @@
+\chapter{Experimental analysis of the adapted Exponential Sketch}
+\label{chap:experiments}
+
+Recall that the differentially private version of ExpSketch (Algorithm~\ref{alg:df_expsketch}) starts by creating an artificial element with a very large attribute, which is then processed by ExpSketch. In the proof of Theorem~\ref{theorem:DP-ExpSketch}, this element is used only to guarantee that the sum of the attributes of unique elements of the processed data stream exceeds a certain value. The attribute of the artificial element depends on the configuration of DP-ExpSketch, namely on the parameters $\varepsilon$, $m$ and $\lmax$. If the configuration is such that this attribute is close to the sum of the attributes of unique elements of the data stream, the estimate will be very inaccurate. Conversely, a configuration in which this attribute is much smaller than the sum of the attributes of unique elements maintains a satisfactory estimation accuracy. Moreover, if it is known that DP-ExpSketch will only process data streams in which the sum of the attributes of unique elements exceeds this value, the artificial element can be omitted while still maintaining differential privacy. This results in a significantly higher accuracy of DP-ExpSketch.
+
+\section{The artificial element does not significantly affect the data stream}
+
+Figure~\ref{fig:DF_EXP_VS_EXP_CASE_1} compares the accuracy of ExpSketch and its differentially private version. The algorithms were run on a stream of $100\,000$ elements, with an upper bound of $100$ on the attribute of each element. The size $m$ of the data sketch ranged from $2$ to $100$. The private version of the algorithm was $(0.1, 0)$-differentially private.
+
+By Theorem~\ref{theorem:DP-ExpSketch}, for parameters $m$ and $\varepsilon$, DP-ExpSketch is $(m\varepsilon, 0)$-differentially private. Therefore, for a given $m$, the parameter $\varepsilon$ was set to $\frac{0.1}{m}$. The plot shows that for the considered data, the accuracy of the private data sketch is very close to that of its non-private version. However, as the size of the data sketch increases, the attribute of the artificial element also increases, which results in a decrease in estimation accuracy.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{DF_EXP_vs_EXP_case1}
+  \caption{Relative error of DP-ExpSketch and ExpSketch when the artificial element does not significantly affect the data stream.}
+  \label{fig:DF_EXP_VS_EXP_CASE_1}
+\end{figure}
+
+\section{The artificial element significantly affects the data stream}
+
+In this experiment, a data stream configuration similar to that of the previous section was used, but the privacy parameter $\varepsilon$ was decreased from $0.1$ to $0.0001$, which significantly increases the attribute of the artificial element. In this configuration, the artificial element has a substantial impact on the sum of the attributes of unique elements of the data stream, which results in inaccurate estimates of DP-ExpSketch (Figure~\ref{fig:DF_EXP_VS_EXP_CASE_2}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.85\textwidth]{DF_EXP_vs_EXP_case2}
+  \caption{Relative error of DP-ExpSketch and ExpSketch when the artificial element significantly affects the data stream.}
+  \label{fig:DF_EXP_VS_EXP_CASE_2}
+\end{figure}

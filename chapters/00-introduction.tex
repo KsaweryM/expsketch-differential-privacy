@@ -1,0 +1,31 @@
+\chapter*{Introduction}
+
+A crucial aspect of computer science is the ability to analyze large datasets efficiently. For this purpose, data structures called data sketches are used, which provide approximate answers to queries about large datasets. Data sketches are essential when a dataset is so large that exact algorithms would require significantly more time and hardware resources than are available. At the same time, the results of such an analysis must not compromise the privacy of the individuals whose data is included in the analyzed dataset. A commonly used method to ensure this is differential privacy. This thesis examines FastExpSketch in the context of privacy attacks and explores possible methods of implementing differential privacy in this sketch.
+
+\section*{Problem statement}
+
+Although data sketches are widely used due to their efficiency in processing large datasets, they may be vulnerable to privacy attacks. Modifying a sketch so that it ensures a proper level of privacy protection without significantly impairing its efficiency and accuracy is a challenge. This thesis examines the theoretical and practical challenges associated with adapting FastExpSketch to differential privacy.
+
+\section*{Objectives of the thesis}
+
+The main objectives of this thesis are:
+\begin{enumerate}
+  \item to discuss the key concepts related to differential privacy and data sketches;
+  \item to analyze the literature on differential privacy in the context of data sketches;
+  \item to propose a differentially private version of the FastExpSketch algorithm;
+  \item to simulate a privacy attack on FastExpSketch and analyze the obtained results;
+  \item to evaluate experimentally the impact of differential privacy on the estimation accuracy of FastExpSketch.
+\end{enumerate}
+
+\section*{Outline of the thesis}
+
+The thesis is organized as follows.
+
+\begin{description}
+  \item[Chapter~\ref{chap:dp}] introduces the key concepts, definitions and theorems of differential privacy. It defines pure and approximate differential privacy and the Laplace mechanism for achieving differential privacy, and it discusses the theorems that make differential privacy a strong notion of privacy protection.
+  \item[Chapter~\ref{chap:sketches}] explains the concept of data sketches using examples such as MinCount and the FM sketch.
+  \item[Chapter~\ref{chap:overview_of_articles}] discusses several scientific articles on differential privacy in data sketches.
+  \item[Chapter~\ref{chap:expSketch}] begins with an overview of ExpSketch. Then, its sensitivity to changes of individual elements of the data stream is examined. It is shown that as the number of elements in the data stream grows, the influence of a single element on ExpSketch decreases drastically, which can be perceived as an advantage in terms of privacy protection. A modification of ExpSketch that satisfies pure differential privacy is proposed. It is then proven that, for a subset of data streams that excludes extreme cases in which a single element has a significant impact on the stream, ExpSketch without any modifications satisfies approximate differential privacy. All privacy properties proven in this chapter for ExpSketch also hold for FastExpSketch.
+  \item[Chapter~\ref{chap:attacks}] analyzes the literature on privacy attacks. Subsequently, a model is proposed in which an adversary attempts to attack a system that uses FastExpSketch or DP-FastExpSketch. Based on simulations of this model, the adversary's chances of success are compared depending on whether a differentially private data sketch is used.
+  \item[Chapter~\ref{chap:experiments}] compares experimentally the accuracy of the differentially private version of ExpSketch with the regular version.
+\end{description}

@@ -1,0 +1,89 @@
+\chapter{Overview of articles on the privacy of data sketches}
+\label{chap:overview_of_articles}
+
+\section{Challenges in preserving privacy when publishing data sketches}
+
+The paper~\cite{Cardinality_Estimators_do_not_Preserve_Privacy} analyzes an interesting model of data privacy for sketches (Figure~\ref{fig:adversary_model}). Let us assume that a group of users visits various places daily, such as cinemas, theaters or restaurants. Additionally, there is a service that receives a stream of user data: when a user visits a specific place, the information about this visit is added to the data stream. The primary objective of the service is to provide information on the number of people who visited specific places. To achieve this, data sketches designed for cardinality estimation are used. Furthermore, the service should be able to answer more complex queries, such as the number of people who visited both the first and the second place. This requires data sketches that can be merged into one sketch, in such a way that privacy is preserved every time.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=5in]{adversary-access-to-sketch}
+  \caption{Adversary model from~\cite{Cardinality_Estimators_do_not_Preserve_Privacy}.}
+  \label{fig:adversary_model}
+\end{figure}
+
+The authors proposed a definition of privacy that is weaker than differential privacy. For this definition, they determined a lower bound on the variance of the estimate. More restrictive privacy definitions, such as differential privacy, result in at least the same variance of the estimate.
+
+The main difference between differential privacy and the definition proposed by the authors is the source of the adversary's uncertainty. Under differential privacy, user privacy is preserved through the randomness of the algorithm: even if the adversary knows the data of all users except the target, the target's privacy is still maintained. In the weaker privacy model, it is assumed that the adversary has very limited knowledge of the users' data.
+
+The analysis shows that if a data sketch satisfied the proposed definition of privacy every time a new element of the data stream were added to it, or every time it were merged with another sketch, then the variance of the estimate would grow exponentially with the number of elements. This growth is too large for such a system to be useful in practice. In other words, a data sketch cannot protect privacy after every insertion of a new element, because it would be too inaccurate. To protect users' privacy while maintaining accuracy, one can instead operate on a regular data sketch that does not satisfy privacy requirements and introduce privacy protection only when the sketch or an estimate computed from it is to be published.
+
+\section{Privacy of users in a distributed system}
+
+Assume that there are $N$ users and $M$ access points, and that each user can connect multiple times to any access point. Each access point uses a data sketch to estimate the number of distinct users who have connected to it. This model is presented in Figure~\ref{fig:FM_sketch_usage_case}. The article~\cite{An_algorithm_for_privacy_preserving_distributed_user_statistics} proposes a method of counting the total number of distinct users across all access points that prevents any access point from gaining sensitive information about the activity of specific users at other access points. The proposed solution uses the FM sketch.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=3.5in]{FM_sketch_usage_case}
+  \caption{Data sketches in a distributed system, as considered in~\cite{An_algorithm_for_privacy_preserving_distributed_user_statistics}.}
+  \label{fig:FM_sketch_usage_case}
+\end{figure}
+
+\subsection{Privacy preservation in the FM sketch}
+
+The goal is to calculate the total number of users across all access points in such a way that no access point obtains information about the activity of particular users at other access points. The solution proposed in~\cite{An_algorithm_for_privacy_preserving_distributed_user_statistics} significantly reduces the leakage of users' private data. The access point responsible for aggregating the data collected from other access points only slightly increases its knowledge about the activity of specific users at the other access points. This increase is small compared to the scenario in which the aggregating access point receives raw data sketches from the other access points.
+
+Figure~\ref{fig:private_FM} illustrates how the first access point obtains information about the cumulative activity of users at the other access points. First, the first access point creates a matrix of random integers and sends it to the next access point. This access point checks which fields of its sketch matrix contain ones. If the field of the sketch matrix at coordinates $(i, j)$ equals $1$, the access point draws a new random value for the field of the random matrix at coordinates $(i, j)$. Otherwise, if the field of the sketch matrix at $(i, j)$ equals $0$, the value of the field of the random matrix at $(i, j)$ remains unchanged. Once the access point has processed the entire random matrix, it sends it to the next access point. When all access points have processed the random matrix, it returns to the first access point. By comparing its original random matrix with the received one, the first access point can read off a sketch matrix. This matrix is equal to the matrix that would be obtained by merging the sketches of all other access points. The first access point can then merge its own sketch with this matrix and, by computing an estimate from the result, learn the approximate number of distinct users across all access points. At the same time, the first access point cannot determine at which access point the activity of individual users originated. To further enhance user privacy, the access points modify the random matrix not according to their true sketches but according to slightly noised versions of them.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=5.5in]{private_FM}
+  \caption{The first access point aggregates data from the other access points.}
+  \label{fig:private_FM}
+\end{figure}
+
+In~\cite{An_algorithm_for_privacy_preserving_distributed_user_statistics}, privacy is not defined as precisely as in~\cite{Cardinality_Estimators_do_not_Preserve_Privacy}, and it is not as restrictive as differential privacy. Privacy in this model is preserved mainly under the assumption that there are many access points. With a small number of access points, user privacy would be at risk.
+
+\section{The FM sketch itself preserves differential privacy}
+
+The article~\cite{FM_itself_preserves_DF} proves that the FM sketch (in a slightly more general form than the one described above) is $(\varepsilon, \delta)$-differentially private if the data stream contains at least $\frac{\sqrt{\ln(1/\delta)}}{\varepsilon\gamma}$ elements, where $\gamma$ is one of the parameters of the generalized FM sketch. This property can be used to construct an FM sketch that is differentially private regardless of the number of elements in the data stream: it suffices to add $\frac{\sqrt{\ln(1/\delta)}}{\varepsilon\gamma}$ distinct artificial elements to the data stream and to take this surplus into account when computing the estimate. A similar approach is used in the next chapter to make ExpSketch differentially private.
+
+\section{Differential privacy of a class of cardinality estimators}
+
+The previous article dealt with the privacy of the FM sketch. The article~\cite{Order_Invariant_Cardinality_Estimators_Are_Differentially_Private} discusses the privacy of a whole class of cardinality estimators, namely those that are hash-based, order-invariant and of bounded size. The FM sketch also belongs to this class. The authors proved the following theorem.
+
+\begin{theorem}[{\cite{Order_Invariant_Cardinality_Estimators_Are_Differentially_Private}}]
+\label{theorem:general_DF_theorem}
+A hash-based, order-invariant cardinality estimator of bounded size is $\varepsilon$-differentially private if it satisfies the following two conditions:
+\begin{enumerate}
+  \item The data stream contains at least $n_0 = \frac{k_{\max}}{1 - e^{-\varepsilon}}$ elements, where $k_{\max}$ is a constant determined by the given data sketch.
+  \item Let $s$ denote the internal state of the data sketch and let $\pi(s)$ denote the probability that adding a new element to the sketch in state $s$ changes its state. Then
+  \[
+  \sup_s \pi(s) < 1 - e^{-\varepsilon}.
+  \]
+\end{enumerate}
+\end{theorem}
+
+In the subsequent part of the article, the authors propose a modification that makes any data sketch from this class differentially private. Let us assume that the data sketch $S$ belongs to this class. The modification is presented in Algorithm~\ref{alg:dp_cardinality}.
+
+\begin{algorithm}[htbp]
+\caption{DP-cardinality-estimator($\mathfrak{M}$, $\varepsilon$)}
+\label{alg:dp_cardinality}
+\begin{algorithmic}[1]
+\State \textbf{Initialization:}
+\State $S, n_0 \gets$ DP-init-Sketch($\varepsilon$) \label{line:DP_C_E_1}
+\State $\pi_0 \gets 1 - e^{-\varepsilon}$
+\State
+\State \textbf{Update the data sketch $S$ with the elements of the data stream $\mathfrak{M}$:}
+\ForAll{$x \in \mathfrak{M}$}
+    \If{$\mathcal{H}(x) < \pi_0$} \Comment{hash $\mathcal{H}(x) \in [0, 1)$} \label{line:DP_C_E_2}
+        \State $S.\mathrm{add}(x)$
+    \EndIf
+\EndFor
+\State
+\State \textbf{Estimate the number of distinct elements in the data stream $\mathfrak{M}$:}
+\State \Return $\frac{N(S)}{\pi_0} - n_0$
+\end{algorithmic}
+\end{algorithm}
+
+DP-init-Sketch($\varepsilon$) in line~\ref{line:DP_C_E_1} initializes the data sketch $S$ by adding $n_0 = \frac{k_{\max}}{1 - e^{-\varepsilon}}$ artificial elements. This ensures that the first condition of Theorem~\ref{theorem:general_DF_theorem} is met. Line~\ref{line:DP_C_E_2} ensures that each element of the data stream is added to the sketch only with probability $\pi_0$, which ensures that the second condition of Theorem~\ref{theorem:general_DF_theorem} is met. Since both conditions of the theorem are met, the sketch is differentially private.
